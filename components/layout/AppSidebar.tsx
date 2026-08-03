@@ -1,198 +1,96 @@
 "use client";
 
 import { useState } from "react";
-import { useAuthStore } from "@/stores/auth-store";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  FolderKanban,
-  KanbanSquare,
-  DollarSign,
+  BarChart3,
+  Building2,
+  CalendarRange,
+  Columns3,
+  BriefcaseBusiness,
+  ListChecks,
+  Menu,
   Settings,
-  LogOut,
+  UsersRound,
+  WalletCards,
   X,
-  Zap,
-  Keyboard,
 } from "lucide-react";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { cn } from "@/lib/utils";
-import { ShortcutHint } from "@/components/shortcuts/ShortcutHint";
-import { ShortcutsHelpDialog } from "@/components/shortcuts/ShortcutsHelpDialog";
+import { LogoutButton } from "@/features/auth/LogoutButton";
+import type { SessionUser } from "@/lib/auth/session";
 
-interface AppSidebarProps {
-  isOpen: boolean;
-  onClose: () => void;
-  currentView: string;
-  onNavigate: (view: string) => void;
-}
+const items = [
+  { href: "/dashboard", label: "Ringkasan", icon: BarChart3, roles: ["ADMIN", "PROJECT_MANAGER", "MEMBER"] },
+  { href: "/projects", label: "Proyek", icon: CalendarRange, roles: ["ADMIN", "PROJECT_MANAGER", "MEMBER"] },
+  { href: "/my-work", label: "Pekerjaan Saya", icon: ListChecks, roles: ["ADMIN", "PROJECT_MANAGER", "MEMBER"] },
+  { href: "/board", label: "Board", icon: Columns3, roles: ["ADMIN", "PROJECT_MANAGER", "MEMBER"] },
+  { href: "/team", label: "Tim", icon: UsersRound, roles: ["ADMIN", "PROJECT_MANAGER"] },
+  { href: "/reports", label: "Laporan", icon: BriefcaseBusiness, roles: ["ADMIN", "PROJECT_MANAGER"] },
+  { href: "/finance", label: "Keuangan", icon: WalletCards, roles: ["ADMIN"] },
+  { href: "/settings", label: "Pengaturan", icon: Settings, roles: ["ADMIN", "PROJECT_MANAGER", "MEMBER"] },
+] as const;
 
-const menuItems = [
-  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, shortcut: ["G", "D"] },
-  { key: "projects", label: "Projects", icon: FolderKanban, shortcut: ["G", "P"] },
-  { key: "board", label: "Board", icon: KanbanSquare, shortcut: ["G", "B"] },
-  { key: "finance", label: "Finance", icon: DollarSign, shortcut: ["G", "F"] },
-];
-
-const settingsItem = { key: "settings", label: "Settings", icon: Settings, shortcut: ["G", "S"] };
-
-export function AppSidebar({
-  isOpen,
-  onClose,
-  currentView,
-  onNavigate,
-}: AppSidebarProps) {
-  const { user, logout } = useAuthStore();
-  const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
-
-  const handleNavigate = (view: string) => {
-    onNavigate(view);
-    onClose();
-  };
-
-  const handleLogout = () => {
-    logout();
-    onClose();
-  };
+export function AppSidebar({ user }: { user: SessionUser }) {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const visibleItems = items.filter((item) => (item.roles as readonly string[]).includes(user.role));
 
   return (
-    <>
-      {/* Mobile overlay */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/60 md:hidden"
-          onClick={onClose}
-        />
-      )}
+    <div className="sidebar-region">
+      <div className="mobile-sidebar-bar">
+        <Link className="mobile-sidebar-brand" href="/dashboard">
+          <span className="sidebar-logo">N</span>
+          <span>Nexty Workspace</span>
+        </Link>
+        <button className="mobile-menu-button" type="button" onClick={() => setOpen(true)} aria-label="Buka navigasi">
+          <Menu className="size-5" />
+        </button>
+      </div>
 
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          "fixed top-0 left-0 z-50 h-full w-60 bg-base-bg border-r border-base-border flex flex-col transition-transform duration-200 ease-in-out",
-          "md:translate-x-0 md:static md:z-auto",
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        )}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 h-14 border-b border-base-border shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-brand-primary flex items-center justify-center">
-              <Zap className="w-3.5 h-3.5 text-white" />
+      <button
+        className={`mobile-sidebar-overlay ${open ? "visible" : ""}`}
+        type="button"
+        aria-label="Tutup navigasi"
+        onClick={() => setOpen(false)}
+      />
+
+      <aside className={`app-sidebar ${open ? "mobile-open" : ""}`}>
+        <div className="sidebar-brand">
+          <Link className="flex min-w-0 flex-1 items-center gap-3" href="/dashboard" onClick={() => setOpen(false)} aria-label="Nexty Workspace">
+            <div className="sidebar-logo">N</div>
+            <div className="min-w-0">
+              <strong>Nexty Workspace</strong>
+              <span>Internal Project Management</span>
             </div>
-            <span className="text-sm font-semibold text-text-main tracking-tight">
-              Nexty Labs
-            </span>
-          </div>
-          <button
-            onClick={onClose}
-            className="md:hidden p-1 rounded hover:bg-base-hover text-text-muted"
-          >
-            <X className="w-4 h-4" />
+          </Link>
+          <button className="mobile-sidebar-close" type="button" onClick={() => setOpen(false)} aria-label="Tutup navigasi">
+            <X className="size-5" />
           </button>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive =
-              currentView === item.key ||
-              (item.key === "projects" && currentView === "project-detail");
-
+        <nav className="sidebar-nav" aria-label="Navigasi utama">
+          {visibleItems.map(({ href, label, icon: Icon }) => {
+            const active = pathname === href || (href === "/projects" && pathname.startsWith("/projects/"));
             return (
-              <button
-                key={item.key}
-                onClick={() => handleNavigate(item.key)}
-                className={cn(
-                  "w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded text-[13px] font-medium transition-colors group",
-                  isActive
-                    ? "bg-base-hover text-text-main"
-                    : "text-text-muted hover:text-text-main hover:bg-base-hover/60"
-                )}
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span className="flex-1 text-left">{item.label}</span>
-                {isActive ? (
-                  <div className="w-1 h-1 rounded-full bg-brand-primary" />
-                ) : (
-                  <span className="opacity-0 group-hover:opacity-100 lg:opacity-60 transition-opacity">
-                    <ShortcutHint keys={item.shortcut} />
-                  </span>
-                )}
-              </button>
+              <Link key={href} href={href} className={`sidebar-link ${active ? "active" : ""}`} onClick={() => setOpen(false)}>
+                <Icon className="size-[18px]" />
+                <span>{label}</span>
+              </Link>
             );
           })}
-
-          {/* Divider before Settings */}
-          <div className="my-2 mx-2 h-px bg-base-border" />
-
-          {/* Settings item */}
-          {(() => {
-            const Icon = settingsItem.icon;
-            const isActive = currentView === settingsItem.key;
-            return (
-              <button
-                onClick={() => handleNavigate(settingsItem.key)}
-                className={cn(
-                  "w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded text-[13px] font-medium transition-colors group",
-                  isActive
-                    ? "bg-base-hover text-text-main"
-                    : "text-text-subtle hover:text-text-main hover:bg-base-hover/60"
-                )}
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span className="flex-1 text-left">{settingsItem.label}</span>
-                {isActive ? (
-                  <div className="w-1 h-1 rounded-full bg-brand-primary" />
-                ) : (
-                  <span className="opacity-0 group-hover:opacity-100 lg:opacity-60 transition-opacity">
-                    <ShortcutHint keys={settingsItem.shortcut} />
-                  </span>
-                )}
-              </button>
-            );
-          })()}
         </nav>
 
-        {/* Footer */}
-        <div className="border-t border-base-border p-3 shrink-0">
-          {user && (
-            <div className="px-2 mb-2">
-              <p className="text-xs text-text-main truncate">{user.name}</p>
-              <p className="text-[11px] text-text-subtle truncate">
-                {user.email}
-              </p>
+        <div className="sidebar-footer">
+          <div className="workspace-switcher">
+            <span className="workspace-switcher-icon"><Building2 className="size-4" /></span>
+            <div className="min-w-0 flex-1">
+              <strong>PT Nexty Digital</strong>
+              <span>Workspace internal</span>
             </div>
-          )}
-
-          {/* Theme toggle + Shortcuts row */}
-          <div className="flex items-center gap-1 px-2.5 py-1.5 mb-0.5">
-            <ThemeToggle />
-            <button
-              onClick={() => setShortcutsHelpOpen(true)}
-              className="flex-1 flex items-center gap-2.5 px-1 py-0.5 rounded text-[13px] font-medium text-text-muted hover:text-text-main hover:bg-base-hover/60 transition-colors"
-            >
-              <Keyboard className="w-4 h-4 shrink-0" />
-              <span>Shortcuts</span>
-              <span className="ml-auto opacity-60">
-                <ShortcutHint keys={["?"]} />
-              </span>
-            </button>
           </div>
-
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded text-[13px] font-medium text-text-muted hover:text-red-400 hover:bg-red-500/5 transition-colors"
-          >
-            <LogOut className="w-4 h-4 shrink-0" />
-            <span>Logout</span>
-          </button>
+          <LogoutButton compact />
         </div>
       </aside>
-
-      {/* Shortcuts Help Dialog */}
-      <ShortcutsHelpDialog
-        open={shortcutsHelpOpen}
-        onOpenChange={setShortcutsHelpOpen}
-      />
-    </>
+    </div>
   );
 }
