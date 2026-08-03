@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Semua data operasional hanya diakses melalui server terpercaya (Admin SDK).
+    // Firebase Client SDK dipakai hanya untuk Authentication.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
