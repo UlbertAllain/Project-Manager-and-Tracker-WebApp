@@ -1,11 +1,15 @@
 import { create } from "zustand";
 import { Project } from "@/lib/types";
+import { getDeadlineInfo, getTaskDueInfo } from "@/lib/helpers";
 
 // ==================== NOTIFICATION TYPES ====================
 
 export type NotificationType =
   | "deadline_warning"
+  | "due_today"
   | "overdue"
+  | "task_due_today"
+  | "task_overdue"
   | "status_change"
   | "payment_update";
 
@@ -99,45 +103,46 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   generateFromProjects: (projects) => {
     const newNotifications: Notification[] = [];
 
-    const now = Date.now();
-    const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
-
     for (const project of projects) {
       // Skip completed or cancelled projects
       if (project.status === "COMPLETED" || project.status === "CANCELLED")
         continue;
 
-      // Check for overdue deadline
       if (project.deadline) {
-        const deadlineTime = new Date(project.deadline).getTime();
-        const daysOverdue = Math.ceil(
-          (now - deadlineTime) / (1000 * 60 * 60 * 24)
-        );
+        const deadline = getDeadlineInfo(project.status, project.deadline);
+        const timestamp = new Date(project.deadline);
 
-        if (daysOverdue > 0) {
+        if (deadline.severity === "OVERDUE") {
           newNotifications.push({
             id: generateNotificationId(project.id, "overdue"),
             type: "overdue",
             title: "Project Overdue",
-            message: `${project.projectName} sudah melewati deadline ${daysOverdue} hari yang lalu`,
+            message: `${project.projectName} sudah melewati deadline ${Math.abs(deadline.daysRemaining ?? 0)} hari`,
             projectId: project.id,
             projectName: project.projectName,
-            timestamp: new Date(deadlineTime),
+            timestamp,
             read: false,
           });
-        } else if (deadlineTime - now <= threeDaysMs) {
-          // Deadline within 3 days
-          const daysRemaining = Math.ceil(
-            (deadlineTime - now) / (1000 * 60 * 60 * 24)
-          );
+        } else if (deadline.severity === "DUE_TODAY") {
+          newNotifications.push({
+            id: generateNotificationId(project.id, "due_today"),
+            type: "due_today",
+            title: "Deadline Hari Ini",
+            message: `${project.projectName} perlu diselesaikan hari ini`,
+            projectId: project.id,
+            projectName: project.projectName,
+            timestamp,
+            read: false,
+          });
+        } else if (deadline.severity === "DUE_SOON") {
           newNotifications.push({
             id: generateNotificationId(project.id, "deadline_warning"),
             type: "deadline_warning",
             title: "Deadline Mendekat",
-            message: `${project.projectName} deadline dalam ${daysRemaining} hari`,
+            message: `${project.projectName} deadline dalam ${deadline.daysRemaining} hari`,
             projectId: project.id,
             projectName: project.projectName,
-            timestamp: new Date(deadlineTime - threeDaysMs),
+            timestamp,
             read: false,
           });
         }
@@ -158,6 +163,38 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
           projectId: project.id,
           projectName: project.projectName,
           timestamp: new Date(project.updatedAt || project.createdAt),
+          read: false,
+        });
+      }
+
+      const overdueTasks = project.tasks.filter(
+        (task) => getTaskDueInfo(task.dueDate, task.isCompleted).severity === "OVERDUE"
+      );
+      if (overdueTasks.length > 0) {
+        newNotifications.push({
+          id: generateNotificationId(project.id, "task_overdue"),
+          type: "task_overdue",
+          title: "Task Overdue",
+          message: `${project.projectName} punya ${overdueTasks.length} task yang melewati due date`,
+          projectId: project.id,
+          projectName: project.projectName,
+          timestamp: new Date(),
+          read: false,
+        });
+      }
+
+      const dueTodayTasks = project.tasks.filter(
+        (task) => getTaskDueInfo(task.dueDate, task.isCompleted).severity === "DUE_TODAY"
+      );
+      if (dueTodayTasks.length > 0) {
+        newNotifications.push({
+          id: generateNotificationId(project.id, "task_due_today"),
+          type: "task_due_today",
+          title: "Task Due Hari Ini",
+          message: `${project.projectName} punya ${dueTodayTasks.length} task yang jatuh tempo hari ini`,
+          projectId: project.id,
+          projectName: project.projectName,
+          timestamp: new Date(),
           read: false,
         });
       }

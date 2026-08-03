@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Project } from "@/lib/types";
 import { getSocket } from "@/lib/socket";
+import { useAuthStore } from "@/stores/auth-store";
 
 async function fetchProject(id: string): Promise<Project | null> {
   const res = await fetch(`/api/projects/${id}`);
@@ -27,7 +28,11 @@ async function updateProject({
 }
 
 async function deleteProject(id: string) {
-  const res = await fetch(`/api/projects/${id}`, { method: "DELETE" });
+  const userId = useAuthStore.getState().user?.id;
+  const res = await fetch(`/api/projects/${id}`, {
+    method: "DELETE",
+    headers: userId ? { "x-user-id": userId } : undefined,
+  });
   if (!res.ok) {
     throw new Error("Gagal menghapus project");
   }

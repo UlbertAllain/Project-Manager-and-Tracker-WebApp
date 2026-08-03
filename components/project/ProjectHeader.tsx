@@ -27,6 +27,7 @@ interface ProjectHeaderProps {
   onBack: () => void;
   onStatusChange: (status: string) => void;
   statusSubmitting: boolean;
+  canManageProject?: boolean;
   onDuplicate?: () => void;
   duplicateLoading?: boolean;
 }
@@ -36,6 +37,7 @@ export function ProjectHeader({
   onBack,
   onStatusChange,
   statusSubmitting,
+  canManageProject = true,
   onDuplicate,
   duplicateLoading,
 }: ProjectHeaderProps) {
@@ -68,7 +70,7 @@ export function ProjectHeader({
         </div>
 
         <div className="flex items-center gap-2">
-        {onDuplicate && (
+        {canManageProject && onDuplicate && (
           <Button
             variant="ghost"
             size="sm"
@@ -94,7 +96,7 @@ export function ProjectHeader({
           <Select
             value={project.status}
             onValueChange={onStatusChange}
-            disabled={statusSubmitting}
+            disabled={statusSubmitting || !canManageProject}
           >
             <SelectTrigger
               className={`h-7 w-36 text-xs ${STATUS_BADGE_CLASSES[project.status] || ""}`}

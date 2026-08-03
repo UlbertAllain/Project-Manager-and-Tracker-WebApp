@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { createTransactionSchema } from "@/lib/schemas";
+import { getPaginationParams, paginateArray } from "@/lib/pagination";
 import { NextRequest, NextResponse } from "next/server";
 
 // GET /api/transactions — all transactions (global finance)
@@ -9,6 +10,7 @@ export async function GET(req: NextRequest) {
     const projectId = url.searchParams.get("projectId");
     const startDate = url.searchParams.get("startDate");
     const endDate = url.searchParams.get("endDate");
+    const shouldPaginate = url.searchParams.has("page") || url.searchParams.has("limit");
 
     const where: Record<string, unknown> = {};
     if (projectId) where.projectId = projectId;
@@ -24,6 +26,12 @@ export async function GET(req: NextRequest) {
       orderBy: { date: "desc" },
       include: { project: { select: { projectName: true } } },
     });
+
+    if (shouldPaginate) {
+      return NextResponse.json(
+        paginateArray(transactions, getPaginationParams(url.searchParams))
+      );
+    }
 
     return NextResponse.json({ data: transactions });
   } catch (error) {

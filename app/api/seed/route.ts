@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { collections, adminDb } from "@/lib/firebase-admin";
+import { hashPassword, requireRole } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
 // Helper to delete all documents in a collection
@@ -19,8 +20,16 @@ async function deleteCollection(collectionRef: FirebaseFirestore.CollectionRefer
 }
 
 // POST /api/seed — reset + seed demo data
-export async function POST() {
+export async function POST(req: Request) {
   try {
+    const usersSnap = await collections.users.limit(1).get();
+    const isBootstrapSeed = usersSnap.empty;
+
+    if (!isBootstrapSeed) {
+      const auth = await requireRole(req, ["ADMIN"]);
+      if ("error" in auth) return auth.error;
+    }
+
     // ===== STEP 1: RESET — hapus semua data dulu =====
     const collectionNames = [
       "activityLogs",
@@ -43,7 +52,7 @@ export async function POST() {
       data: {
         email: "admin@nextylab.com",
         name: "Admin Nexty Labs",
-        password: "admin123",
+        password: hashPassword("admin123"),
         role: "ADMIN",
       },
     });

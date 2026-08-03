@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { hashPassword, isHashedPassword, verifyPassword } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 
 // POST /api/auth/login — authenticate user against Firestore
@@ -13,11 +14,18 @@ export async function POST(req: NextRequest) {
     }
 
     const user = await db.user.findUnique({ where: { email } });
-    if (!user || user.password !== password) {
+    if (!user || !verifyPassword(password, user.password)) {
       return NextResponse.json(
         { error: "Email atau password salah" },
         { status: 401 }
       );
+    }
+
+    if (!isHashedPassword(user.password)) {
+      await db.user.update({
+        where: { id: user.id },
+        data: { password: hashPassword(password) },
+      });
     }
 
     return NextResponse.json({

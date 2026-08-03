@@ -32,6 +32,8 @@ export interface Project {
 export interface Task {
   id: string;
   title: string;
+  assignedTo?: string;
+  dueDate?: string;
   isCompleted: boolean;
   order: number;
   projectId: string;

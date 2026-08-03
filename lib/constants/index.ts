@@ -8,6 +8,7 @@ export const PROJECT_STATUSES = [
   "REVIEW",
   "REVISION",
   "ON_HOLD",
+  "OVERDUE",
   "CANCELLED",
   "COMPLETED",
 ] as const;
@@ -19,6 +20,7 @@ export const ACTIVE_STATUSES = [
   "REVIEW",
   "REVISION",
   "ON_HOLD",
+  "OVERDUE",
 ] as const;
 
 export const BOARD_COLUMNS = [
@@ -28,6 +30,7 @@ export const BOARD_COLUMNS = [
   "REVIEW",
   "REVISION",
   "ON_HOLD",
+  "OVERDUE",
   "COMPLETED",
 ] as const;
 
@@ -45,6 +48,8 @@ export const CATEGORIES = [
 
 export const PAYMENT_STATUSES = ["UNPAID", "PARTIAL", "PAID"] as const;
 
+export const USER_ROLES = ["ADMIN", "PROJECT_LEAD", "STAFF"] as const;
+
 export const LINK_PLATFORMS = [
   "Google Drive",
   "Figma",
@@ -61,6 +66,7 @@ export const STATUS_LABELS: Record<string, string> = {
   REVIEW: "Review",
   REVISION: "Revision",
   ON_HOLD: "On Hold",
+  OVERDUE: "Overdue",
   CANCELLED: "Cancelled",
   COMPLETED: "Completed",
 };
@@ -73,6 +79,7 @@ export const STATUS_COLORS: Record<string, string> = {
   REVIEW: "bg-sky-400",
   REVISION: "bg-orange-400",
   ON_HOLD: "bg-zinc-500",
+  OVERDUE: "bg-red-600",
   CANCELLED: "bg-red-500",
   COMPLETED: "bg-emerald-500",
 };
@@ -85,6 +92,7 @@ export const STATUS_BADGE_CLASSES: Record<string, string> = {
   REVIEW: "bg-sky-400/10 text-sky-400 border-sky-400/20",
   REVISION: "bg-orange-400/10 text-orange-400 border-orange-400/20",
   ON_HOLD: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
+  OVERDUE: "bg-red-500/10 text-red-400 border-red-500/20",
   CANCELLED: "bg-red-500/10 text-red-400 border-red-500/20",
   COMPLETED: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
 };
@@ -112,5 +120,6 @@ export const COLUMN_HEADER_CLASSES: Record<string, string> = {
   REVIEW: "bg-sky-600",
   REVISION: "bg-orange-600",
   ON_HOLD: "bg-zinc-600",
+  OVERDUE: "bg-red-700",
   COMPLETED: "bg-emerald-600",
 };

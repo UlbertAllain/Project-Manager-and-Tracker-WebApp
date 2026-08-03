@@ -33,12 +33,18 @@ interface NotificationCenterProps {
 function NotificationIcon({ type }: { type: Notification["type"] }) {
   switch (type) {
     case "overdue":
+    case "task_overdue":
       return (
         <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
       );
     case "deadline_warning":
       return (
         <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+      );
+    case "due_today":
+    case "task_due_today":
+      return (
+        <Clock className="w-3.5 h-3.5 text-orange-400 shrink-0 mt-0.5" />
       );
     case "payment_update":
       return (
@@ -59,9 +65,13 @@ function NotificationIcon({ type }: { type: Notification["type"] }) {
 function getBorderColor(type: Notification["type"]): string {
   switch (type) {
     case "overdue":
+    case "task_overdue":
       return "border-l-red-400";
     case "deadline_warning":
       return "border-l-amber-400";
+    case "due_today":
+    case "task_due_today":
+      return "border-l-orange-400";
     case "payment_update":
       return "border-l-emerald-400";
     case "status_change":

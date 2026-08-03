@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useCallback } from "react";
-import { Project } from "@/lib/types";
+import { AuthUser, Project } from "@/lib/types";
 import {
   STATUS_LABELS,
   STATUS_BADGE_CLASSES,
@@ -46,6 +46,7 @@ import {
   FolderKanban,
   Download,
   FileUp,
+  UserRound,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -65,6 +66,8 @@ import {
   useUpdateProject,
   useDeleteProject,
 } from "@/hooks/useProjects";
+import { useUsers } from "@/hooks/useUsers";
+import { useAuthStore } from "@/stores/auth-store";
 import { useQueryClient } from "@tanstack/react-query";
 import { ProjectCardSkeleton } from "@/components/ui/skeleton-loader";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -89,9 +92,10 @@ const emptyForm = {
 };
 
 // Extracted OUTSIDE the component to avoid re-creation on every render
-function ProjectFormFields({ form, setForm }: {
+function ProjectFormFields({ form, setForm, users }: {
   form: typeof emptyForm;
   setForm: React.Dispatch<React.SetStateAction<typeof emptyForm>>;
+  users: AuthUser[];
 }) {
   return (
     <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
@@ -129,14 +133,38 @@ function ProjectFormFields({ form, setForm }: {
           <label className="block text-xs text-text-muted mb-1">
             Project Lead
           </label>
-          <Input
-            value={form.projectLead}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, projectLead: e.target.value }))
-            }
-            placeholder="Project lead"
-            className="h-8 text-sm bg-base-bg border-base-border"
-          />
+          {users.length > 0 ? (
+            <Select
+              value={form.projectLead || "UNASSIGNED"}
+              onValueChange={(value) =>
+                setForm((prev) => ({
+                  ...prev,
+                  projectLead: value === "UNASSIGNED" ? "" : value,
+                }))
+              }
+            >
+              <SelectTrigger className="h-8 text-sm bg-base-bg border-base-border">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="UNASSIGNED">Belum ditentukan</SelectItem>
+                {users.map((user) => (
+                  <SelectItem key={user.id} value={user.email}>
+                    {user.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              value={form.projectLead}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, projectLead: e.target.value }))
+              }
+              placeholder="Project lead"
+              className="h-8 text-sm bg-base-bg border-base-border"
+            />
+          )}
         </div>
         <div>
           <label className="block text-xs text-text-muted mb-1">
@@ -287,6 +315,10 @@ function ProjectFormFields({ form, setForm }: {
 
 export function ProjectsView({ onSelectProject }: ProjectsViewProps) {
   const { data: projects = [], isLoading: loading } = useProjects();
+  const { data: users = [] } = useUsers();
+  const currentUser = useAuthStore((state) => state.user);
+  const canManageProjects = currentUser?.role === "ADMIN" || currentUser?.role === "PROJECT_LEAD";
+  const canDeleteProjects = currentUser?.role === "ADMIN";
   const createProject = useCreateProject();
   const updateProject = useUpdateProject();
   const deleteProject = useDeleteProject();
@@ -294,6 +326,7 @@ export function ProjectsView({ onSelectProject }: ProjectsViewProps) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [assignmentFilter, setAssignmentFilter] = useState("ALL");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
@@ -428,9 +461,15 @@ export function ProjectsView({ onSelectProject }: ProjectsViewProps) {
         p.clientName.toLowerCase().includes(debouncedSearch.toLowerCase());
       const matchStatus =
         statusFilter === "ALL" || p.status === statusFilter;
-      return matchSearch && matchStatus;
+      const matchAssignment =
+        assignmentFilter === "ALL" ||
+        (assignmentFilter === "MINE" &&
+          Boolean(currentUser) &&
+          [currentUser?.email, currentUser?.name].includes(p.projectLead)) ||
+        p.projectLead === assignmentFilter;
+      return matchSearch && matchStatus && matchAssignment;
     });
-  }, [projects, debouncedSearch, statusFilter]);
+  }, [projects, debouncedSearch, statusFilter, assignmentFilter, currentUser]);
 
   if (loading) {
     return (
@@ -463,15 +502,17 @@ export function ProjectsView({ onSelectProject }: ProjectsViewProps) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-xs gap-1.5 text-text-muted hover:text-text-main"
-            onClick={() => setShowImportDialog(true)}
-          >
-            <FileUp className="w-3.5 h-3.5" />
-            Import
-          </Button>
+          {canManageProjects && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs gap-1.5 text-text-muted hover:text-text-main"
+              onClick={() => setShowImportDialog(true)}
+            >
+              <FileUp className="w-3.5 h-3.5" />
+              Import
+            </Button>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -499,14 +540,16 @@ export function ProjectsView({ onSelectProject }: ProjectsViewProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button
-            onClick={openCreateDialog}
-            size="sm"
-            className="h-8 text-xs gap-1.5"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            New Project
-          </Button>
+          {canManageProjects && (
+            <Button
+              onClick={openCreateDialog}
+              size="sm"
+              className="h-8 text-xs gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              New Project
+            </Button>
+          )}
         </div>
       </div>
 
@@ -537,6 +580,21 @@ export function ProjectsView({ onSelectProject }: ProjectsViewProps) {
             {PROJECT_STATUSES.map((s) => (
               <SelectItem key={s} value={s}>
                 {STATUS_LABELS[s]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={assignmentFilter} onValueChange={setAssignmentFilter}>
+          <SelectTrigger className="h-8 w-40 text-xs bg-base-card border-base-border">
+            <UserRound className="w-3 h-3 mr-1" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All Lead</SelectItem>
+            {currentUser && <SelectItem value="MINE">Project Saya</SelectItem>}
+            {users.map((user) => (
+              <SelectItem key={user.id} value={user.email}>
+                {user.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -611,25 +669,29 @@ export function ProjectsView({ onSelectProject }: ProjectsViewProps) {
                           <ExternalLink className="w-3.5 h-3.5 mr-2" />
                           Lihat Detail
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEditDialog(project);
-                          }}
-                        >
-                          <Pencil className="w-3.5 h-3.5 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-red-400 focus:text-red-400"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteTarget(project.id);
-                          }}
-                        >
-                          <Trash2 className="w-3.5 h-3.5 mr-2" />
-                          Hapus
-                        </DropdownMenuItem>
+                        {canManageProjects && (
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditDialog(project);
+                            }}
+                          >
+                            <Pencil className="w-3.5 h-3.5 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                        )}
+                        {canDeleteProjects && (
+                          <DropdownMenuItem
+                            className="text-red-400 focus:text-red-400"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteTarget(project.id);
+                            }}
+                          >
+                            <Trash2 className="w-3.5 h-3.5 mr-2" />
+                            Hapus
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -654,6 +716,15 @@ export function ProjectsView({ onSelectProject }: ProjectsViewProps) {
                         className="text-[10px] px-1.5 py-0 bg-red-500/10 text-red-400 border-red-500/20"
                       >
                         Overdue
+                      </Badge>
+                    )}
+                    {project.projectLead && (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] px-1.5 py-0 bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                      >
+                        {users.find((user) => user.email === project.projectLead)?.name ||
+                          project.projectLead}
                       </Badge>
                     )}
                   </div>
@@ -702,7 +773,7 @@ export function ProjectsView({ onSelectProject }: ProjectsViewProps) {
               Buat Project Baru
             </DialogTitle>
           </DialogHeader>
-          <ProjectFormFields form={form} setForm={setForm} />
+          <ProjectFormFields form={form} setForm={setForm} users={users} />
           <DialogFooter>
             <Button
               variant="ghost"
@@ -741,7 +812,7 @@ export function ProjectsView({ onSelectProject }: ProjectsViewProps) {
               Edit Project
             </DialogTitle>
           </DialogHeader>
-          <ProjectFormFields form={form} setForm={setForm} />
+          <ProjectFormFields form={form} setForm={setForm} users={users} />
           <DialogFooter>
             <Button
               variant="ghost"

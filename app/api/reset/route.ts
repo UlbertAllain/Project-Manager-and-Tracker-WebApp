@@ -1,4 +1,5 @@
 import { collections, adminDb } from "@/lib/firebase-admin";
+import { requireRole } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
 // Helper to delete all documents in a collection
@@ -22,8 +23,11 @@ async function deleteCollection(collectionRef: FirebaseFirestore.CollectionRefer
 }
 
 // DELETE /api/reset — hapus semua data di Firestore
-export async function DELETE() {
+export async function DELETE(req: Request) {
   try {
+    const auth = await requireRole(req, ["ADMIN"]);
+    if ("error" in auth) return auth.error;
+
     const results: Record<string, number> = {};
 
     // Delete all collections in order (child first, then parent)

@@ -1,10 +1,13 @@
 import { db } from "@/lib/db";
 import { createProjectSchema } from "@/lib/schemas";
+import { getPaginationParams, paginateArray } from "@/lib/pagination";
 import { NextRequest, NextResponse } from "next/server";
 
 // GET /api/projects — list all projects
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const url = new URL(req.url);
+    const shouldPaginate = url.searchParams.has("page") || url.searchParams.has("limit");
     const projects = await db.project.findMany({
       include: {
         tasks: true,
@@ -20,6 +23,12 @@ export async function GET() {
       // Ensure techStack is always an array
       techStack: Array.isArray(p.techStack) ? p.techStack : JSON.parse((p.techStack as string) || "[]"),
     }));
+
+    if (shouldPaginate) {
+      return NextResponse.json(
+        paginateArray(result, getPaginationParams(url.searchParams))
+      );
+    }
 
     return NextResponse.json({ data: result });
   } catch (error) {

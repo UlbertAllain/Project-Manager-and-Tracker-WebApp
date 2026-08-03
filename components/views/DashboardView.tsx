@@ -9,6 +9,8 @@ import {
   formatRupiah,
   formatDate,
   getDeadlineStatus,
+  getDeadlineInfo,
+  getTaskDueInfo,
   formatBudgetShort,
   formatRelativeTime,
   getDaysRemaining,
@@ -29,6 +31,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Calendar,
+  Download,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -112,25 +115,6 @@ function CustomTooltip({
   return null;
 }
 
-// Deadline urgency color helper
-function getDeadlineUrgencyColor(daysRemaining: number): {
-  border: string;
-  text: string;
-  bg: string;
-} {
-  if (daysRemaining < 0) return { border: "border-l-red-500", text: "text-red-400", bg: "bg-red-500/10" };
-  if (daysRemaining <= 1) return { border: "border-l-orange-500", text: "text-orange-400", bg: "bg-orange-500/10" };
-  if (daysRemaining <= 3) return { border: "border-l-amber-500", text: "text-amber-400", bg: "bg-amber-500/10" };
-  if (daysRemaining <= 7) return { border: "border-l-yellow-500", text: "text-yellow-400", bg: "bg-yellow-500/10" };
-  return { border: "border-l-emerald-500", text: "text-emerald-400", bg: "bg-emerald-500/10" };
-}
-
-function formatDaysLabel(days: number): string {
-  if (days < 0) return `${Math.abs(days)} hari terlambat`;
-  if (days === 0) return "Hari ini";
-  return `${days} hari lagi`;
-}
-
 // Health score calculation for project health indicator
 function calculateHealthScore(project: Project): { score: number; budget: boolean; taskRate: string; deadlineRisk: string } {
   let score = 100;
@@ -177,6 +161,10 @@ export function DashboardView({
   const { data: projects = [], isLoading: loading } = useProjects();
   const { data: allTransactions = [] } = useTransactions();
   const { data: activityLogs = [] } = useActivityLogs();
+
+  const downloadProjectReport = () => {
+    window.open("/api/reports/projects", "_blank");
+  };
 
   // Stats
   const totalProjects = projects.length;
@@ -324,10 +312,45 @@ export function DashboardView({
     .map((p) => ({
       ...p,
       daysRemaining: getDaysRemaining(p.deadline),
+      deadlineInfo: getDeadlineInfo(p.status, p.deadline),
     }))
     .filter((p) => p.daysRemaining <= 14) // Show projects within 2 weeks or overdue
     .sort((a, b) => a.daysRemaining - b.daysRemaining)
     .slice(0, 5);
+
+  const attentionProjects = projects
+    .filter((p) => !["COMPLETED", "CANCELLED"].includes(p.status))
+    .map((project) => {
+      const deadlineInfo = getDeadlineInfo(project.status, project.deadline);
+      const reasons: string[] = [];
+
+      if (deadlineInfo.needsAttention) reasons.push(deadlineInfo.label);
+      if (project.paymentStatus === "UNPAID") reasons.push("Pembayaran belum masuk");
+      if (project.paymentStatus === "PARTIAL") reasons.push("Pembayaran belum lunas");
+      if (
+        deadlineInfo.daysRemaining !== null &&
+        deadlineInfo.daysRemaining <= 7 &&
+        project.progress < 50
+      ) {
+        reasons.push(`Progress baru ${project.progress}%`);
+      }
+      const overdueTaskCount = project.tasks.filter(
+        (task) => getTaskDueInfo(task.dueDate, task.isCompleted).severity === "OVERDUE"
+      ).length;
+      const dueTodayTaskCount = project.tasks.filter(
+        (task) => getTaskDueInfo(task.dueDate, task.isCompleted).severity === "DUE_TODAY"
+      ).length;
+      if (overdueTaskCount > 0) reasons.push(`${overdueTaskCount} task overdue`);
+      if (dueTodayTaskCount > 0) reasons.push(`${dueTodayTaskCount} task due hari ini`);
+
+      return { project, deadlineInfo, reasons };
+    })
+    .filter((item) => item.reasons.length > 0)
+    .sort((a, b) => {
+      const severityRank = { OVERDUE: 0, DUE_TODAY: 1, DUE_SOON: 2, SAFE: 3 };
+      return severityRank[a.deadlineInfo.severity] - severityRank[b.deadlineInfo.severity];
+    })
+    .slice(0, 6);
 
   // Activity feed — max 8 items
   const activityFeed = activityLogs.slice(0, 8);
@@ -463,11 +486,20 @@ export function DashboardView({
       className="space-y-6 max-w-6xl"
     >
       {/* Page title */}
-      <motion.div variants={itemVariants}>
-        <h1 className="text-xl font-semibold text-text-main">Dashboard</h1>
-        <p className="text-sm text-text-muted mt-0.5">
-          Overview semua project dan keuangan
-        </p>
+      <motion.div variants={itemVariants} className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-text-main">Dashboard</h1>
+          <p className="text-sm text-text-muted mt-0.5">
+            Overview semua project dan keuangan
+          </p>
+        </div>
+        <button
+          onClick={downloadProjectReport}
+          className="h-8 px-3 rounded-md border border-base-border bg-base-card text-xs text-text-muted hover:text-text-main hover:bg-base-hover flex items-center gap-1.5"
+        >
+          <Download className="w-3.5 h-3.5" />
+          Laporan CSV
+        </button>
       </motion.div>
 
       {/* Stats cards — 6 cards */}
@@ -528,6 +560,72 @@ export function DashboardView({
             Sisa: {formatRupiah(totalBudget - totalPaid)}
           </span>
         </div>
+      </motion.div>
+
+      {/* Attention list */}
+      <motion.div
+        variants={itemVariants}
+        className="bg-base-card border border-base-border rounded-lg"
+      >
+        <div className="flex items-center justify-between p-4 border-b border-base-border">
+          <h3 className="text-sm font-medium text-text-main flex items-center gap-1.5">
+            <AlertTriangle className="w-3.5 h-3.5 text-orange-400" />
+            Butuh Perhatian Hari Ini
+          </h3>
+          <span className="text-[11px] text-text-subtle">
+            {attentionProjects.length} item
+          </span>
+        </div>
+        {attentionProjects.length === 0 ? (
+          <div className="p-8 text-center">
+            <div className="w-10 h-10 rounded-full bg-emerald-500/10 mx-auto mb-3 flex items-center justify-center">
+              <ShieldCheck className="w-5 h-5 text-emerald-400" />
+            </div>
+            <p className="text-sm text-emerald-400 font-medium">
+              Tidak ada prioritas genting
+            </p>
+            <p className="text-xs text-text-subtle mt-1">
+              Deadline, pembayaran, dan progress project aktif masih terkendali
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-base-border">
+            {attentionProjects.map(({ project, deadlineInfo, reasons }) => (
+              <button
+                key={project.id}
+                onClick={() => onSelectProject(project.id)}
+                className={`w-full text-left px-4 py-3 hover:bg-base-hover/50 transition-colors border-l-4 ${deadlineInfo.borderClass}`}
+              >
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-text-main truncate">
+                      {project.projectName}
+                    </p>
+                    <p className="text-[11px] text-text-subtle truncate">
+                      {project.clientName}
+                    </p>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] px-1.5 py-0 shrink-0 ${deadlineInfo.badgeClass}`}
+                  >
+                    {deadlineInfo.label}
+                  </Badge>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {reasons.map((reason) => (
+                    <span
+                      key={reason}
+                      className="rounded border border-base-border bg-base-bg px-2 py-0.5 text-[10px] text-text-muted"
+                    >
+                      {reason}
+                    </span>
+                  ))}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </motion.div>
 
       {/* Revenue Trend Area Chart */}
@@ -818,21 +916,20 @@ export function DashboardView({
             ) : (
               <div className="divide-y divide-base-border">
                 {nearDeadline.map((project) => {
-                  const urgency = getDeadlineUrgencyColor(project.daysRemaining);
                   return (
                     <button
                       key={project.id}
                       onClick={() => onSelectProject(project.id)}
-                      className={`w-full text-left px-4 py-3 hover:bg-base-hover/50 transition-colors border-l-4 ${urgency.border}`}
+                      className={`w-full text-left px-4 py-3 hover:bg-base-hover/50 transition-colors border-l-4 ${project.deadlineInfo.borderClass}`}
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-sm text-text-main font-medium truncate pr-2">
                           {project.projectName}
                         </span>
                         <span
-                          className={`text-[11px] font-medium shrink-0 ${urgency.text}`}
+                          className={`text-[11px] font-medium shrink-0 ${project.deadlineInfo.textClass}`}
                         >
-                          {formatDaysLabel(project.daysRemaining)}
+                          {project.deadlineInfo.label}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-[11px] text-text-subtle">

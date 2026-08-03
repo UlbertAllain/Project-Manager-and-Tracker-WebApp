@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { requireRole } from "@/lib/auth";
 import { updateProjectSchema } from "@/lib/schemas";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -121,10 +122,13 @@ export async function PATCH(
 
 // DELETE /api/projects/[id] — delete project
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireRole(req, ["ADMIN"]);
+    if ("error" in auth) return auth.error;
+
     const { id } = await params;
     const project = await db.project.findUnique({ where: { id } });
     if (!project) {

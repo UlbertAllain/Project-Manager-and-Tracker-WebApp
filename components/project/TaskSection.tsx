@@ -1,9 +1,17 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Task } from "@/lib/types";
+import { AuthUser, Task } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Circle, Plus, Trash2, GripVertical, Pencil } from "lucide-react";
+import { CheckCircle2, Circle, Plus, Trash2, GripVertical, Pencil, UserRound, Calendar } from "lucide-react";
+import { formatDateShort, getTaskDueInfo } from "@/lib/helpers";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { AnimatePresence } from "framer-motion";
 import {
   DndContext,
@@ -27,24 +35,36 @@ import { CSS } from "@dnd-kit/utilities";
 
 interface TaskSectionProps {
   tasks: Task[];
+  users: AuthUser[];
   newTask: string;
+  newTaskAssignee: string;
+  newTaskDueDate: string;
   onNewTaskChange: (val: string) => void;
+  onNewTaskAssigneeChange: (val: string) => void;
+  onNewTaskDueDateChange: (val: string) => void;
   onAddTask: () => void;
   onToggleTask: (taskId: string) => void;
   onDeleteTask: (taskId: string) => void;
   onReorderTasks: (reorderedTasks: Task[]) => void;
   onEditTask: (taskId: string, newTitle: string) => void;
+  onUpdateTaskDueDate: (taskId: string, dueDate: string) => void;
 }
 
 export function TaskSection({
   tasks,
+  users,
   newTask,
+  newTaskAssignee,
+  newTaskDueDate,
   onNewTaskChange,
+  onNewTaskAssigneeChange,
+  onNewTaskDueDateChange,
   onAddTask,
   onToggleTask,
   onDeleteTask,
   onReorderTasks,
   onEditTask,
+  onUpdateTaskDueDate,
 }: TaskSectionProps) {
   const completedCount = tasks.filter((t) => t.isCompleted).length;
 
@@ -112,7 +132,7 @@ export function TaskSection({
       </div>
 
       {/* Add task */}
-      <div className="p-3 border-b border-base-border flex items-center gap-2">
+      <div className="p-3 border-b border-base-border grid grid-cols-1 md:grid-cols-[1fr_180px_150px_auto] gap-2">
         <input
           type="text"
           value={newTask}
@@ -120,6 +140,42 @@ export function TaskSection({
           placeholder="Tambah task baru..."
           className="flex-1 h-8 px-3 text-sm bg-base-bg border border-base-border rounded-md text-text-main placeholder:text-text-subtle focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
           onKeyDown={(e) => e.key === "Enter" && onAddTask()}
+        />
+        {users.length > 0 ? (
+          <Select
+            value={newTaskAssignee || "UNASSIGNED"}
+            onValueChange={(value) =>
+              onNewTaskAssigneeChange(value === "UNASSIGNED" ? "" : value)
+            }
+          >
+            <SelectTrigger className="h-8 text-sm bg-base-bg border-base-border">
+              <SelectValue placeholder="Assign ke..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="UNASSIGNED">Belum assign</SelectItem>
+              {users.map((user) => (
+                <SelectItem key={user.id} value={user.email}>
+                  {user.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <input
+            type="text"
+            value={newTaskAssignee}
+            onChange={(e) => onNewTaskAssigneeChange(e.target.value)}
+            placeholder="Assign ke..."
+            className="h-8 px-3 text-sm bg-base-bg border border-base-border rounded-md text-text-main placeholder:text-text-subtle focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+            onKeyDown={(e) => e.key === "Enter" && onAddTask()}
+          />
+        )}
+        <input
+          type="date"
+          value={newTaskDueDate}
+          onChange={(e) => onNewTaskDueDateChange(e.target.value)}
+          className="h-8 px-3 text-sm bg-base-bg border border-base-border rounded-md text-text-main focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+          aria-label="Due date task"
         />
         <Button
           size="sm"
@@ -156,6 +212,8 @@ export function TaskSection({
                     onToggle={onToggleTask}
                     onDelete={onDeleteTask}
                     onEdit={onEditTask}
+                    onUpdateDueDate={onUpdateTaskDueDate}
+                    users={users}
                   />
                 ))}
               </AnimatePresence>
@@ -195,11 +253,15 @@ function SortableTaskItem({
   onToggle,
   onDelete,
   onEdit,
+  onUpdateDueDate,
+  users,
 }: {
   task: Task;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
   onEdit: (id: string, newTitle: string) => void;
+  onUpdateDueDate: (id: string, dueDate: string) => void;
+  users: AuthUser[];
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(task.title);
@@ -219,6 +281,7 @@ function SortableTaskItem({
     transition,
     zIndex: isDragging ? 10 : undefined,
   };
+  const dueInfo = getTaskDueInfo(task.dueDate, task.isCompleted);
 
   // Enter edit mode
   const handleDoubleClick = () => {
@@ -300,17 +363,49 @@ function SortableTaskItem({
           className="flex-1 text-sm bg-base-bg border border-brand-primary rounded px-2 py-0.5 text-text-main focus:outline-none min-w-0"
         />
       ) : (
-        <span
-          className={`text-sm flex-1 cursor-text ${
-            task.isCompleted
-              ? "line-through text-text-subtle"
-              : "text-text-main"
-          }`}
-          onDoubleClick={handleDoubleClick}
-          title="Double-click untuk edit"
-        >
-          {task.title}
-        </span>
+        <div className="flex-1 min-w-0">
+          <span
+            className={`text-sm cursor-text block truncate ${
+              task.isCompleted
+                ? "line-through text-text-subtle"
+                : "text-text-main"
+            }`}
+            onDoubleClick={handleDoubleClick}
+            title="Double-click untuk edit"
+          >
+            {task.title}
+          </span>
+          {task.assignedTo && (
+            <span className="mt-0.5 flex items-center gap-1 text-[10px] text-text-subtle">
+              <UserRound className="w-3 h-3" />
+              {users.find((user) => user.email === task.assignedTo)?.name ||
+                task.assignedTo}
+            </span>
+          )}
+          {task.dueDate && (
+            <span className={`mt-0.5 flex items-center gap-1 text-[10px] ${dueInfo.textClass}`}>
+              <Calendar className="w-3 h-3" />
+              {formatDateShort(task.dueDate)}
+              {dueInfo.needsAttention && (
+                <span className={`rounded border px-1 py-0 ${dueInfo.badgeClass}`}>
+                  {dueInfo.label}
+                </span>
+              )}
+            </span>
+          )}
+        </div>
+      )}
+
+      {!isEditing && (
+        <input
+          type="date"
+          value={task.dueDate || ""}
+          onChange={(e) => onUpdateDueDate(task.id, e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+          className="hidden sm:block h-7 w-32 rounded border border-base-border bg-base-bg px-2 text-[11px] text-text-muted focus:outline-none focus:border-brand-primary"
+          aria-label={`Due date ${task.title}`}
+          title="Ubah due date task"
+        />
       )}
 
       {/* Edit hint icon — shows on hover when not editing */}

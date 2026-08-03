@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 import { usePreferencesStore } from "@/stores/preferences-store";
+import { useCreateUser, useUsers } from "@/hooks/useUsers";
+import { USER_ROLES } from "@/lib/constants";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -18,6 +20,8 @@ import {
   Moon,
   Monitor,
   Loader2,
+  UserPlus,
+  Users,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -63,12 +67,21 @@ const itemVariants = {
 
 export function SettingsView({ onNavigate }: SettingsViewProps) {
   const { user, login, logout } = useAuthStore();
+  const isAdmin = user?.role === "ADMIN";
+  const { data: users = [] } = useUsers();
+  const createUserMutation = useCreateUser();
   const { preferences, setDefaultView, setShowShortcutHints, setCompactMode } =
     usePreferencesStore();
   const { theme, setTheme, resolvedTheme } = useTheme();
 
   // Profile editing state
   const [editName, setEditName] = useState(user?.name || "");
+  const [newUserForm, setNewUserForm] = useState({
+    email: "",
+    name: "",
+    password: "",
+    role: "STAFF",
+  });
   const [savingProfile, setSavingProfile] = useState(false);
   const [resettingData, setResettingData] = useState(false);
 
@@ -106,7 +119,10 @@ export function SettingsView({ onNavigate }: SettingsViewProps) {
   const handleResetData = async () => {
     setResettingData(true);
     try {
-      const res = await fetch("/api/seed", { method: "POST" });
+      const res = await fetch("/api/seed", {
+        method: "POST",
+        headers: user?.id ? { "x-user-id": user.id } : undefined,
+      });
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error || "Gagal reset data");
@@ -124,6 +140,21 @@ export function SettingsView({ onNavigate }: SettingsViewProps) {
   // Logout handler
   const handleLogout = () => {
     logout();
+  };
+
+  const handleCreateUser = async () => {
+    if (!newUserForm.email || !newUserForm.name || !newUserForm.password) {
+      toast.error("Email, nama, dan password wajib diisi");
+      return;
+    }
+
+    try {
+      await createUserMutation.mutateAsync(newUserForm);
+      setNewUserForm({ email: "", name: "", password: "", role: "STAFF" });
+      toast.success("User berhasil dibuat");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal membuat user");
+    }
   };
 
   // Theme options
@@ -253,6 +284,109 @@ export function SettingsView({ onNavigate }: SettingsViewProps) {
           </div>
         </div>
       </motion.div>
+
+      {/* B. Appearance Section */}
+      {isAdmin && (
+        <motion.div variants={itemVariants}>
+          <div className="bg-base-card border border-base-border rounded-lg">
+            <div className="p-4 md:p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                  <Users className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold text-text-main">
+                    Manajemen User
+                  </h2>
+                  <p className="text-xs text-text-subtle">
+                    Tambah anggota dan atur role dasar
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_260px] gap-4">
+                <div className="space-y-2">
+                  {users.length === 0 ? (
+                    <p className="text-sm text-text-subtle">Belum ada user</p>
+                  ) : (
+                    users.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between gap-3 rounded-lg border border-base-border bg-base-bg px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm text-text-main truncate">{item.name}</p>
+                          <p className="text-xs text-text-subtle truncate">{item.email}</p>
+                        </div>
+                        <span className="shrink-0 rounded border border-brand-primary/20 bg-brand-primary/10 px-2 py-0.5 text-[10px] text-brand-primary">
+                          {item.role}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="space-y-2 rounded-lg border border-base-border bg-base-bg p-3">
+                  <Input
+                    value={newUserForm.name}
+                    onChange={(event) =>
+                      setNewUserForm((prev) => ({ ...prev, name: event.target.value }))
+                    }
+                    placeholder="Nama user"
+                    className="h-8 text-sm bg-base-card border-base-border"
+                  />
+                  <Input
+                    type="email"
+                    value={newUserForm.email}
+                    onChange={(event) =>
+                      setNewUserForm((prev) => ({ ...prev, email: event.target.value }))
+                    }
+                    placeholder="email@domain.com"
+                    className="h-8 text-sm bg-base-card border-base-border"
+                  />
+                  <Input
+                    type="password"
+                    value={newUserForm.password}
+                    onChange={(event) =>
+                      setNewUserForm((prev) => ({ ...prev, password: event.target.value }))
+                    }
+                    placeholder="Password"
+                    className="h-8 text-sm bg-base-card border-base-border"
+                  />
+                  <Select
+                    value={newUserForm.role}
+                    onValueChange={(role) => setNewUserForm((prev) => ({ ...prev, role }))}
+                  >
+                    <SelectTrigger className="h-8 text-sm bg-base-card border-base-border">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {USER_ROLES.map((role) => (
+                        <SelectItem key={role} value={role}>
+                          {role}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    size="sm"
+                    className="w-full h-8 gap-1.5 text-xs"
+                    onClick={handleCreateUser}
+                    disabled={createUserMutation.isPending}
+                  >
+                    {createUserMutation.isPending ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <UserPlus className="w-3.5 h-3.5" />
+                    )}
+                    Tambah User
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* B. Appearance Section */}
       <motion.div variants={itemVariants}>
@@ -452,57 +586,58 @@ export function SettingsView({ onNavigate }: SettingsViewProps) {
             </div>
 
             <div className="space-y-4">
-              {/* Reset data */}
-              <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-red-500/10 bg-red-500/5">
-                <div className="space-y-0.5">
-                  <Label className="text-sm text-text-main">
-                    Reset Semua Data
-                  </Label>
-                  <p className="text-xs text-text-subtle">
-                    Hapus semua data dan kembalikan ke demo seed data
-                  </p>
-                </div>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 px-3 gap-1.5 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 shrink-0"
-                      disabled={resettingData}
-                    >
-                      {resettingData ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <RefreshCcw className="w-3.5 h-3.5" />
-                      )}
-                      Reset
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent className="bg-base-card border-base-border">
-                    <AlertDialogHeader>
-                      <AlertDialogTitle className="text-text-main">
-                        Reset Semua Data?
-                      </AlertDialogTitle>
-                      <AlertDialogDescription className="text-text-muted">
-                        Semua data project, task, transaksi, dan komentar akan
-                        dihapus dan diganti dengan data demo. Aksi ini tidak
-                        dapat diurungkan.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel className="bg-base-bg border-base-border text-text-muted hover:bg-base-hover">
-                        Batal
-                      </AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleResetData}
-                        className="bg-red-500 text-white hover:bg-red-600"
+              {isAdmin && (
+                <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-red-500/10 bg-red-500/5">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm text-text-main">
+                      Reset Semua Data
+                    </Label>
+                    <p className="text-xs text-text-subtle">
+                      Hapus semua data dan kembalikan ke demo seed data
+                    </p>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-3 gap-1.5 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 shrink-0"
+                        disabled={resettingData}
                       >
-                        Ya, Reset Data
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
+                        {resettingData ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCcw className="w-3.5 h-3.5" />
+                        )}
+                        Reset
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="bg-base-card border-base-border">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-text-main">
+                          Reset Semua Data?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-text-muted">
+                          Semua data project, task, transaksi, dan komentar akan
+                          dihapus dan diganti dengan data demo. Aksi ini tidak
+                          dapat diurungkan.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel className="bg-base-bg border-base-border text-text-muted hover:bg-base-hover">
+                          Batal
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleResetData}
+                          className="bg-red-500 text-white hover:bg-red-600"
+                        >
+                          Ya, Reset Data
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              )}
 
               {/* Logout */}
               <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-base-border">

@@ -3,6 +3,14 @@
 
 import { z } from "zod";
 
+// ---------- User Schemas ----------
+export const createUserSchema = z.object({
+  email: z.string().email("Email tidak valid"),
+  name: z.string().min(1, "Nama wajib diisi"),
+  password: z.string().min(6, "Password minimal 6 karakter"),
+  role: z.enum(["ADMIN", "PROJECT_LEAD", "STAFF"]).default("STAFF"),
+});
+
 // ---------- Project Schemas ----------
 export const createProjectSchema = z.object({
   projectName: z.string().min(1, "Nama project wajib diisi"),
@@ -17,6 +25,7 @@ export const createProjectSchema = z.object({
       "REVIEW",
       "REVISION",
       "ON_HOLD",
+      "OVERDUE",
       "CANCELLED",
       "COMPLETED",
     ])
@@ -54,6 +63,7 @@ export const updateProjectSchema = z.object({
       "REVIEW",
       "REVISION",
       "ON_HOLD",
+      "OVERDUE",
       "CANCELLED",
       "COMPLETED",
     ])
@@ -75,6 +85,8 @@ export const updateProjectSchema = z.object({
       z.object({
         id: z.string().optional(),
         title: z.string().min(1),
+        assignedTo: z.string().optional(),
+        dueDate: z.string().optional(),
         isCompleted: z.boolean().default(false),
         order: z.number().int().min(0),
       }),

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { getPaginationParams, paginateArray } from "@/lib/pagination";
 import { NextRequest, NextResponse } from "next/server";
 
 // GET /api/logs?projectId=xxx — returns logs for a specific project
@@ -7,6 +8,7 @@ export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
     const projectId = url.searchParams.get("projectId");
+    const shouldPaginate = url.searchParams.has("page") || url.searchParams.has("limit");
 
     if (projectId) {
       // Project-specific logs
@@ -14,6 +16,12 @@ export async function GET(req: NextRequest) {
         where: { projectId },
         orderBy: { timestamp: "desc" },
       });
+      if (shouldPaginate) {
+        return NextResponse.json(
+          paginateArray(logs, getPaginationParams(url.searchParams))
+        );
+      }
+
       return NextResponse.json({ data: logs });
     }
 
@@ -25,6 +33,12 @@ export async function GET(req: NextRequest) {
         project: { select: { projectName: true, id: true } },
       },
     });
+
+    if (shouldPaginate) {
+      return NextResponse.json(
+        paginateArray(logs, getPaginationParams(url.searchParams))
+      );
+    }
 
     return NextResponse.json({ data: logs });
   } catch (error) {

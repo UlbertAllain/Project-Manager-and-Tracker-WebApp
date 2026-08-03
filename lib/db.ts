@@ -6,6 +6,7 @@ import {
   DocumentSnapshot,
   QueryDocumentSnapshot,
   Query,
+  WriteBatch,
 } from 'firebase-admin/firestore';
 import type { Project, Task, LinkAttachment, Transaction, Comment, ActivityLog, AuthUser } from '@/lib/types';
 
@@ -75,25 +76,92 @@ function parseTechStack(value: unknown): string[] {
   }
 }
 
-async function replaceProjectTasks(
-  projectId: string,
-  tasks: Array<Pick<Task, 'title' | 'isCompleted' | 'order'> & { id?: string }>,
+async function commitBatchOperations(
+  operations: Array<(batch: WriteBatch) => void>,
 ) {
-  const existing = await collections.tasks.where('projectId', '==', projectId).get();
-  const batch = adminDb.batch();
+  const chunkSize = 450;
 
-  existing.docs.forEach((doc) => batch.delete(doc.ref));
-  tasks.forEach((task, index) => {
-    const ref = collections.tasks.doc(task.id || generateId());
-    batch.set(ref, {
-      title: task.title,
-      isCompleted: task.isCompleted,
-      order: task.order ?? index,
-      projectId,
-    });
+  for (let i = 0; i < operations.length; i += chunkSize) {
+    const batch = adminDb.batch();
+    operations.slice(i, i + chunkSize).forEach((operation) => operation(batch));
+    await batch.commit();
+  }
+}
+
+function toDateOnlyMs(value: unknown): number | null {
+  if (typeof value !== 'string' || !value) return null;
+
+  const dateOnly = value.split('T')[0];
+  const parts = dateOnly.split('-').map(Number);
+  if (parts.length === 3 && parts.every((part) => Number.isFinite(part))) {
+    return new Date(parts[0], parts[1] - 1, parts[2]).getTime();
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()).getTime();
+}
+
+function todayDateOnlyMs(): number {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+}
+
+function shouldMarkOverdue(project: Record<string, unknown>): boolean {
+  if (
+    project.status === 'COMPLETED' ||
+    project.status === 'CANCELLED' ||
+    project.status === 'OVERDUE'
+  ) {
+    return false;
+  }
+
+  const deadlineMs = toDateOnlyMs(project.deadline);
+  return deadlineMs !== null && deadlineMs < todayDateOnlyMs();
+}
+
+async function applyAutomaticOverdueStatus(
+  projectId: string,
+  projectData: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  if (!shouldMarkOverdue(projectData)) return projectData;
+
+  const updatedAt = new Date().toISOString();
+  await collections.projects.doc(projectId).update({
+    status: 'OVERDUE',
+    updatedAt,
   });
 
-  await batch.commit();
+  return {
+    ...projectData,
+    status: 'OVERDUE',
+    updatedAt,
+  };
+}
+
+async function replaceProjectTasks(
+  projectId: string,
+  tasks: Array<Pick<Task, 'title' | 'isCompleted' | 'order'> & { id?: string; assignedTo?: string; dueDate?: string }>,
+) {
+  const existing = await collections.tasks.where('projectId', '==', projectId).get();
+  const operations: Array<(batch: WriteBatch) => void> = [];
+
+  existing.docs.forEach((doc) => operations.push((batch) => batch.delete(doc.ref)));
+  tasks.forEach((task, index) => {
+    const ref = collections.tasks.doc(task.id || generateId());
+    operations.push((batch) =>
+      batch.set(ref, {
+        title: task.title,
+        assignedTo: task.assignedTo || '',
+        dueDate: task.dueDate || '',
+        isCompleted: task.isCompleted,
+        order: task.order ?? index,
+        projectId,
+      }),
+    );
+  });
+
+  await commitBatchOperations(operations);
 }
 
 async function replaceProjectAttachments(
@@ -101,20 +169,22 @@ async function replaceProjectAttachments(
   attachments: Array<Pick<LinkAttachment, 'title' | 'url' | 'platform'> & { id?: string }>,
 ) {
   const existing = await collections.attachments.where('projectId', '==', projectId).get();
-  const batch = adminDb.batch();
+  const operations: Array<(batch: WriteBatch) => void> = [];
 
-  existing.docs.forEach((doc) => batch.delete(doc.ref));
+  existing.docs.forEach((doc) => operations.push((batch) => batch.delete(doc.ref)));
   attachments.forEach((attachment) => {
     const ref = collections.attachments.doc(attachment.id || generateId());
-    batch.set(ref, {
-      title: attachment.title,
-      url: attachment.url,
-      platform: attachment.platform,
-      projectId,
-    });
+    operations.push((batch) =>
+      batch.set(ref, {
+        title: attachment.title,
+        url: attachment.url,
+        platform: attachment.platform,
+        projectId,
+      }),
+    );
   });
 
-  await batch.commit();
+  await commitBatchOperations(operations);
 }
 
 // ==================== PROJECT OPERATIONS ====================
@@ -123,7 +193,7 @@ async function getProjectWithRelations(projectId: string): Promise<ProjectWithRe
   const projectDoc = await collections.projects.doc(projectId).get();
   if (!projectDoc.exists) return null;
 
-  const projectData = projectDoc.data()!;
+  const projectData = await applyAutomaticOverdueStatus(projectDoc.id, projectDoc.data()!);
 
   // Fetch related collections in parallel — use get() without orderBy to avoid index issues
   const [tasksSnap, attachmentsSnap, transactionsSnap, commentsSnap, logsSnap] = await Promise.all([
@@ -157,6 +227,17 @@ async function getProjectWithRelations(projectId: string): Promise<ProjectWithRe
 export const db = {
   // ===== USER =====
   user: {
+    findMany: async (): Promise<AuthUser[]> => {
+      const snap = await collections.users.get();
+      return snap.docs
+        .map((doc) => {
+          const user = docToObj<AuthUser & { password?: string }>(doc);
+          const { password: _password, ...safeUser } = user;
+          return safeUser;
+        })
+        .sort((a, b) => a.name.localeCompare(b.name));
+    },
+
     findUnique: async ({ where }: { where: { id?: string; email?: string } }): Promise<(AuthUser & { password?: string }) | null> => {
       if (where.email) {
         const snap = await collections.users.where('email', '==', where.email).limit(1).get();
@@ -228,7 +309,7 @@ export const db = {
       const projects: ProjectWithRelations[] = [];
 
       for (const doc of snap.docs) {
-        const projectData = doc.data();
+        const projectData = await applyAutomaticOverdueStatus(doc.id, doc.data());
         const project = {
           id: doc.id,
           ...projectData,
@@ -283,7 +364,7 @@ export const db = {
       }
       const doc = await collections.projects.doc(where.id).get();
       if (!doc.exists) return null;
-      const data = doc.data()!;
+      const data = await applyAutomaticOverdueStatus(doc.id, doc.data()!);
       return {
         id: doc.id,
         ...data,
@@ -302,6 +383,9 @@ export const db = {
         createdAt: now,
         updatedAt: now,
       };
+      if (shouldMarkOverdue(docData)) {
+        docData.status = 'OVERDUE';
+      }
 
       await collections.projects.doc(id).set(docData);
 
@@ -375,7 +459,7 @@ export const db = {
       });
 
       if (Array.isArray(tasks)) {
-        await replaceProjectTasks(where.id, tasks as Array<Pick<Task, 'title' | 'isCompleted' | 'order'> & { id?: string }>);
+        await replaceProjectTasks(where.id, tasks as Array<Pick<Task, 'title' | 'isCompleted' | 'order'> & { id?: string; assignedTo?: string; dueDate?: string }>);
       }
 
       if (Array.isArray(attachments)) {
@@ -383,7 +467,7 @@ export const db = {
       }
 
       const doc = await collections.projects.doc(where.id).get();
-      const docData = doc.data()!;
+      const docData = await applyAutomaticOverdueStatus(doc.id, doc.data()!);
       return {
         id: doc.id,
         ...docData,
@@ -402,14 +486,14 @@ export const db = {
         collections.activityLogs.where('projectId', '==', projectId).get(),
       ]);
 
-      const batch = adminDb.batch();
-      tasksSnap.docs.forEach((d) => batch.delete(d.ref));
-      attachmentsSnap.docs.forEach((d) => batch.delete(d.ref));
-      transactionsSnap.docs.forEach((d) => batch.delete(d.ref));
-      commentsSnap.docs.forEach((d) => batch.delete(d.ref));
-      logsSnap.docs.forEach((d) => batch.delete(d.ref));
-      batch.delete(collections.projects.doc(projectId));
-      await batch.commit();
+      const operations: Array<(batch: WriteBatch) => void> = [];
+      tasksSnap.docs.forEach((d) => operations.push((batch) => batch.delete(d.ref)));
+      attachmentsSnap.docs.forEach((d) => operations.push((batch) => batch.delete(d.ref)));
+      transactionsSnap.docs.forEach((d) => operations.push((batch) => batch.delete(d.ref)));
+      commentsSnap.docs.forEach((d) => operations.push((batch) => batch.delete(d.ref)));
+      logsSnap.docs.forEach((d) => operations.push((batch) => batch.delete(d.ref)));
+      operations.push((batch) => batch.delete(collections.projects.doc(projectId)));
+      await commitBatchOperations(operations);
 
       return { success: true };
     },

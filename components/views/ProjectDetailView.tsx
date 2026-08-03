@@ -19,6 +19,7 @@ import { useProject, useUpdateProjectMutation } from "@/hooks/useProject";
 import { useCreateTransaction, useDeleteTransaction } from "@/hooks/useTransactions";
 import { useCreateComment } from "@/hooks/useComments";
 import { useDuplicateProject } from "@/hooks/useDuplicateProject";
+import { useUsers } from "@/hooks/useUsers";
 
 // Decomposed components
 import { ProjectHeader } from "@/components/project/ProjectHeader";
@@ -38,6 +39,17 @@ function createClientId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 }
 
+function serializeTask(task: Task) {
+  return {
+    id: task.id,
+    title: task.title,
+    assignedTo: task.assignedTo,
+    dueDate: task.dueDate,
+    isCompleted: task.isCompleted,
+    order: task.order,
+  };
+}
+
 interface ProjectDetailViewProps {
   projectId: string;
   onBack: () => void;
@@ -53,12 +65,16 @@ export function ProjectDetailView({
   const deleteTransactionMutation = useDeleteTransaction();
   const createCommentMutation = useCreateComment();
   const duplicateProjectMutation = useDuplicateProject();
+  const { data: users = [] } = useUsers();
   const { user } = useAuthStore();
+  const canManageProject = user?.role === "ADMIN" || user?.role === "PROJECT_LEAD";
 
   const [activeTab, setActiveTab] = useState("overview");
 
   // Task form
   const [newTask, setNewTask] = useState("");
+  const [newTaskAssignee, setNewTaskAssignee] = useState("");
+  const [newTaskDueDate, setNewTaskDueDate] = useState("");
 
   // Transaction form
   const [txForm, setTxForm] = useState({
@@ -106,21 +122,20 @@ export function ProjectDetailView({
       await updateProjectMutation.mutateAsync({
         id: projectId,
         tasks: [
-          ...tasks.map((t) => ({
-            id: t.id,
-            title: t.title,
-            isCompleted: t.isCompleted,
-            order: t.order,
-          })),
+          ...tasks.map(serializeTask),
           {
             id: createClientId("task"),
             title: newTask.trim(),
+            assignedTo: newTaskAssignee.trim(),
+            dueDate: newTaskDueDate,
             isCompleted: false,
             order: tasks.length,
           },
         ],
       });
       setNewTask("");
+      setNewTaskAssignee("");
+      setNewTaskDueDate("");
       toast.success("Task ditambahkan");
     } catch {
       toast.error("Gagal menambah task");
@@ -137,12 +152,7 @@ export function ProjectDetailView({
     try {
       await updateProjectMutation.mutateAsync({
         id: projectId,
-        tasks: tasks.map((t) => ({
-          id: t.id,
-          title: t.title,
-          isCompleted: t.isCompleted,
-          order: t.order,
-        })),
+        tasks: tasks.map(serializeTask),
         progress,
       });
     } catch {
@@ -158,12 +168,7 @@ export function ProjectDetailView({
     try {
       await updateProjectMutation.mutateAsync({
         id: projectId,
-        tasks: tasks.map((t, i) => ({
-          id: t.id,
-          title: t.title,
-          isCompleted: t.isCompleted,
-          order: i,
-        })),
+        tasks: tasks.map((t, i) => serializeTask({ ...t, order: i })),
         progress,
       });
       toast.success("Task dihapus");
@@ -184,12 +189,7 @@ export function ProjectDetailView({
     try {
       await updateProjectMutation.mutateAsync({
         id: projectId,
-        tasks: tasks.map((t) => ({
-          id: t.id,
-          title: t.title,
-          isCompleted: t.isCompleted,
-          order: t.order,
-        })),
+        tasks: tasks.map(serializeTask),
       });
       toast.success("Task diupdate");
     } catch {
@@ -202,15 +202,27 @@ export function ProjectDetailView({
     try {
       await updateProjectMutation.mutateAsync({
         id: projectId,
-        tasks: reorderedTasks.map((t, index) => ({
-          id: t.id,
-          title: t.title,
-          isCompleted: t.isCompleted,
-          order: index,
-        })),
+        tasks: reorderedTasks.map((t, index) => serializeTask({ ...t, order: index })),
       });
     } catch {
       toast.error("Gagal mengubah urutan task");
+    }
+  };
+
+  const handleUpdateTaskDueDate = async (taskId: string, dueDate: string) => {
+    if (!project) return;
+    const tasks = project.tasks.map((t) =>
+      t.id === taskId ? { ...t, dueDate } : t
+    );
+
+    try {
+      await updateProjectMutation.mutateAsync({
+        id: projectId,
+        tasks: tasks.map(serializeTask),
+      });
+      toast.success(dueDate ? "Due date task diupdate" : "Due date task dihapus");
+    } catch {
+      toast.error("Gagal mengupdate due date task");
     }
   };
 
@@ -354,6 +366,7 @@ export function ProjectDetailView({
         onBack={onBack}
         onStatusChange={handleStatusChange}
         statusSubmitting={statusSubmitting}
+        canManageProject={canManageProject}
         onDuplicate={handleDuplicate}
         duplicateLoading={duplicateProjectMutation.isPending}
       />
@@ -415,13 +428,19 @@ export function ProjectDetailView({
         <TabsContent value="overview" className="mt-3">
           <TaskSection
             tasks={project.tasks}
+            users={users}
             newTask={newTask}
+            newTaskAssignee={newTaskAssignee}
+            newTaskDueDate={newTaskDueDate}
             onNewTaskChange={setNewTask}
+            onNewTaskAssigneeChange={setNewTaskAssignee}
+            onNewTaskDueDateChange={setNewTaskDueDate}
             onAddTask={handleAddTask}
             onToggleTask={handleToggleTask}
             onDeleteTask={(id) => setDeleteTarget({ type: "task", id })}
             onReorderTasks={handleReorderTasks}
             onEditTask={handleEditTask}
+            onUpdateTaskDueDate={handleUpdateTaskDueDate}
           />
         </TabsContent>
 
