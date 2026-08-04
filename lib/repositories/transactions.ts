@@ -31,7 +31,7 @@ export async function listTransactions(): Promise<Transaction[]> {
       const transaction = toTransaction(doc.id, doc.data());
       return transaction.projectName
         ? transaction
-        : { ...transaction, projectName: projectNames.get(transaction.projectId) ?? "Project tidak ditemukan" };
+        : { ...transaction, projectName: projectNames.get(transaction.projectId) ?? "Proyek tidak ditemukan" };
     })
     .sort((a, b) => (parseDateValue(b.date)?.getTime() ?? 0) - (parseDateValue(a.date)?.getTime() ?? 0));
 }
@@ -42,7 +42,7 @@ export async function addTransaction(data: Omit<Transaction, "id" | "projectName
   const txRef = db.collection("transactions").doc();
   await db.runTransaction(async (transaction) => {
     const project = await transaction.get(projectRef);
-    if (!project.exists) throw new Error("Project tidak ditemukan.");
+    if (!project.exists) throw new Error("Proyek tidak ditemukan.");
     const projectData = project.data()!;
     const field = data.type === "INCOME" ? "paidAmount" : "totalExpense";
     const currentValue = Number(projectData[field] ?? 0);

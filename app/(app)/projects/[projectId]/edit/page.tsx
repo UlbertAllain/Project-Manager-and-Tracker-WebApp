@@ -14,7 +14,7 @@ export default async function EditProjectPage({ params }: { params: Promise<{ pr
   return (
     <section className="space-y-5">
       <header className="page-heading">
-        <div><Link className="back-link" href={`/projects/${projectId}`}><ChevronLeft className="size-4" /> Kembali ke detail</Link><h2>Edit project</h2><p>Perbarui tanggung jawab, target, jadwal, dan informasi internal.</p></div>
+        <div><Link className="back-link" href={`/projects/${projectId}`}><ChevronLeft className="size-4" /> Kembali ke Detail Proyek</Link><h2>Edit Proyek</h2><p>Perbarui penanggung jawab, target, jadwal, dan informasi proyek.</p></div>
       </header>
       <ProjectForm project={project} users={users} />
     </section>

@@ -9,23 +9,23 @@ import { formatDateTime } from "@/lib/format";
 export function CommentSection({ projectId, comments, tasks, user }: { projectId: string; comments: ProjectComment[]; tasks: ProjectTask[]; user: SessionUser }) {
   return (
     <section className="panel-card overflow-hidden">
-      <div className="section-header"><div><span className="eyebrow">INTERNAL REPORTING</span><h3>Laporan dan diskusi</h3><p>Catat progres, kendala, revisi, dan keputusan dalam konteks project.</p></div><span className="count-pill">{comments.length}</span></div>
+      <div className="section-header"><div><span className="eyebrow">LAPORAN INTERNAL</span><h3>Laporan dan Diskusi</h3><p>Catat perkembangan, kendala, revisi, dan keputusan sesuai konteks proyek.</p></div><span className="count-pill">{comments.length}</span></div>
       <form action={addCommentAction} className="comment-form-modern">
         <input type="hidden" name="projectId" value={projectId} />
         <div className="avatar">{user.name.slice(0, 2).toUpperCase()}</div>
         <div className="min-w-0 flex-1">
-          <textarea className="input min-h-24 resize-y" name="message" placeholder="Tulis laporan progres, kendala, revisi, atau keputusan..." required />
+          <textarea className="input min-h-24 resize-y" name="message" placeholder="Tulis perkembangan pekerjaan, kendala, revisi, atau keputusan..." required />
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
             <select className="compact-select" name="taskId" onChange={(event) => {
               const select = event.currentTarget;
               const hidden = select.form?.elements.namedItem("taskTitle") as HTMLInputElement | null;
               if (hidden) hidden.value = select.options[select.selectedIndex]?.dataset.title ?? "";
             }}>
-              <option data-title="" value="">Umum untuk project</option>
-              {tasks.map((task) => <option data-title={task.title} key={task.id} value={task.id}>Task: {task.title}</option>)}
+              <option data-title="" value="">Umum untuk proyek</option>
+              {tasks.map((task) => <option data-title={task.title} key={task.id} value={task.id}>Tugas: {task.title}</option>)}
             </select>
             <input type="hidden" name="taskTitle" />
-            <button className="btn btn-primary" type="submit"><Send className="size-3.5" /> Kirim laporan</button>
+            <button className="btn btn-primary" type="submit"><Send className="size-3.5" /> Kirim Laporan</button>
           </div>
         </div>
       </form>
@@ -40,7 +40,7 @@ export function CommentSection({ projectId, comments, tasks, user }: { projectId
             {(user.role === "ADMIN" || comment.authorId === user.uid) ? <form action={deleteCommentAction}><input type="hidden" name="projectId" value={projectId} /><input type="hidden" name="commentId" value={comment.id} /><button className="icon-button danger" type="submit" aria-label="Hapus komentar"><Trash2 className="size-3.5" /></button></form> : null}
           </article>
         ))}
-        {comments.length === 0 ? <div className="empty-state">Belum ada laporan. Mulai dengan pembaruan singkat dari tim.</div> : null}
+        {comments.length === 0 ? <div className="empty-state">Belum ada laporan. Tambahkan pembaruan pertama untuk mencatat perkembangan proyek.</div> : null}
       </div>
     </section>
   );

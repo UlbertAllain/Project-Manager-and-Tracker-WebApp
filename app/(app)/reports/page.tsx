@@ -32,23 +32,23 @@ export default async function ReportsPage() {
     <section className="space-y-5">
       <header className="page-heading">
         <div>
-          <span className="eyebrow"><BarChart3 className="size-3.5" /> Kinerja & evaluasi</span>
+          <span className="eyebrow"><BarChart3 className="size-3.5" /> EVALUASI PROYEK</span>
           <h2>Laporan</h2>
-          <p>Evaluasi pelaksanaan proyek dan beban kerja tim berdasarkan data operasional.</p>
+          <p>Tinjau kondisi proyek, penyelesaian tugas, dan kapasitas kerja tim berdasarkan data terbaru.</p>
         </div>
-        <a className="btn btn-secondary" href="/api/export/projects"><Download className="size-4" /> Export CSV</a>
+        <a className="btn btn-secondary" href="/api/export/projects"><Download className="size-4" /> Unduh CSV</a>
       </header>
 
       <div className="dashboard-metrics">
         <Metric icon={<CheckCircle2 />} label="Proyek selesai" value={String(completedProjects)} hint={`dari ${projects.length} proyek`} />
-        <Metric icon={<ShieldAlert />} label="Proyek berisiko" value={String(risky.length)} hint="berdasarkan deadline dan task" danger={risky.length > 0} />
-        <Metric icon={<Trophy />} label="Penyelesaian task" value={`${summary.total ? Math.round((summary.done / summary.total) * 100) : 0}%`} hint={`${summary.done} dari ${summary.total} task`} />
-        <Metric icon={<AlertTriangle />} label="Task terlambat" value={String(summary.overdue)} hint={`${summary.blocked} task blocked`} danger={summary.overdue + summary.blocked > 0} />
+        <Metric icon={<ShieldAlert />} label="Proyek perlu perhatian" value={String(risky.length)} hint="berdasarkan batas waktu dan hambatan" danger={risky.length > 0} />
+        <Metric icon={<Trophy />} label="Penyelesaian tugas" value={`${summary.total ? Math.round((summary.done / summary.total) * 100) : 0}%`} hint={`${summary.done} dari ${summary.total} tugas`} />
+        <Metric icon={<AlertTriangle />} label="Tugas terlambat" value={String(summary.overdue)} hint={`${summary.blocked} tugas terhambat`} danger={summary.overdue + summary.blocked > 0} />
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
         <section className="panel-card overflow-hidden">
-          <div className="section-header"><div><span className="eyebrow">Kondisi proyek</span><h3>Evaluasi portofolio</h3><p>Gunakan data ini untuk menentukan proyek yang perlu diprioritaskan.</p></div></div>
+          <div className="section-header"><div><span className="eyebrow">KONDISI PROYEK</span><h3>Evaluasi Portofolio</h3><p>Gunakan ringkasan ini untuk menentukan proyek yang perlu segera ditindaklanjuti.</p></div></div>
           <div className="report-project-list">
             {projects.map((project, index) => {
               const health = projectHealth(project, groups[index]);
@@ -57,10 +57,10 @@ export default async function ReportsPage() {
                 <Link className="report-project-row" href={`/projects/${project.id}`} key={project.id}>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2"><strong>{project.name}</strong><span className={`health-badge ${health.tone}`}>{health.label}</span></div>
-                    <p>{project.clientName} · {PROJECT_STATUS_LABELS[project.status]} · deadline {formatDate(project.deadline)}</p>
+                    <p>{project.clientName} · {PROJECT_STATUS_LABELS[project.status]} · batas waktu {formatDate(project.deadline)}</p>
                   </div>
-                  <div className="report-score"><strong>{health.score}</strong><span>Health score</span></div>
-                  <div className="report-task-mini"><span>{tasksForProject.done}/{tasksForProject.total} selesai</span><span>{tasksForProject.blocked} blocked</span></div>
+                  <div className="report-score"><strong>{health.score}</strong><span>Nilai kondisi</span></div>
+                  <div className="report-task-mini"><span>{tasksForProject.done}/{tasksForProject.total} selesai</span><span>{tasksForProject.blocked} terhambat</span></div>
                 </Link>
               );
             })}
@@ -69,7 +69,7 @@ export default async function ReportsPage() {
         </section>
 
         <section className="panel-card overflow-hidden">
-          <div className="section-header"><div><span className="eyebrow">Kinerja tim</span><h3>Distribusi pekerjaan</h3><p>Bukan ranking individu; gunakan untuk melihat kapasitas dan hambatan.</p></div><UsersRound className="size-5 text-[var(--brand)]" /></div>
+          <div className="section-header"><div><span className="eyebrow">KAPASITAS TIM</span><h3>Distribusi Pekerjaan</h3><p>Ringkasan ini membantu melihat pembagian tugas dan hambatan, bukan untuk memberi peringkat anggota.</p></div><UsersRound className="size-5 text-[var(--brand)]" /></div>
           <div className="member-performance-list">
             {members.map((member) => {
               const completion = member.total ? Math.round((member.done / member.total) * 100) : 0;
@@ -79,12 +79,12 @@ export default async function ReportsPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-3"><strong>{member.name}</strong><span>{completion}% selesai</span></div>
                     <div className="progress-track mt-2"><span style={{ width: `${completion}%` }} /></div>
-                    <p>{member.total} task · {member.overdue} overdue · {member.blocked} blocked</p>
+                    <p>{member.total} tugas · {member.overdue} terlambat · {member.blocked} terhambat</p>
                   </div>
                 </article>
               );
             })}
-            {members.length === 0 ? <div className="empty-state">Belum ada task yang memiliki assignee.</div> : null}
+            {members.length === 0 ? <div className="empty-state">Belum ada tugas yang diberikan kepada anggota tim.</div> : null}
           </div>
         </section>
       </div>

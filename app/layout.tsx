@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Nexty Workspace — Internal Project Management",
-  description: "Sistem internal untuk mengatur pekerjaan, kolaborasi, pelaporan, dan evaluasi project perusahaan.",
+  title: "Nexty Workspace — Manajemen Proyek Internal",
+  description: "Kelola proyek, pembagian tugas, kolaborasi, pelaporan, dan evaluasi kerja tim dalam satu ruang internal.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

@@ -11,9 +11,9 @@ export type TaskPriority = (typeof TASK_PRIORITIES)[number];
 export type AttachmentPlatform = (typeof ATTACHMENT_PLATFORMS)[number];
 
 export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
-  BACKLOG: "Backlog",
-  IN_PROGRESS: "Dikerjakan",
-  REVIEW: "Review",
+  BACKLOG: "Rencana",
+  IN_PROGRESS: "Berjalan",
+  REVIEW: "Tinjauan",
   COMPLETED: "Selesai",
   CANCELLED: "Dibatalkan",
 };
@@ -21,10 +21,17 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   TODO: "Belum mulai",
   IN_PROGRESS: "Dikerjakan",
-  REVIEW: "Menunggu review",
+  REVIEW: "Menunggu tinjauan",
   REVISION: "Perlu revisi",
   BLOCKED: "Terhambat",
   DONE: "Selesai",
+};
+
+export const PRIORITY_LABELS: Record<ProjectPriority | TaskPriority, string> = {
+  LOW: "Rendah",
+  MEDIUM: "Sedang",
+  HIGH: "Tinggi",
+  URGENT: "Mendesak",
 };
 
 export interface Project {

@@ -29,12 +29,12 @@ export function LoginForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken }),
       });
-      if (!response.ok) throw new Error("Sesi gagal dibuat.");
+      if (!response.ok) throw new Error("Akun belum dapat digunakan.");
       await signOut(firebaseAuth);
       router.replace("/dashboard");
       router.refresh();
     } catch {
-      setError("Email atau password salah, atau akun belum dikonfigurasi.");
+      setError("Email atau kata sandi tidak sesuai. Pastikan akun Anda masih aktif.");
     } finally {
       setLoading(false);
     }
@@ -47,13 +47,13 @@ export function LoginForm() {
         <input className="input" id="email" name="email" type="email" autoComplete="email" required />
       </div>
       <div>
-        <label className="label" htmlFor="password">Password</label>
+        <label className="label" htmlFor="password">Kata sandi</label>
         <input className="input" id="password" name="password" type="password" autoComplete="current-password" minLength={8} required />
       </div>
       {error ? <p className="text-sm font-semibold text-red-600">{error}</p> : null}
       <button className="btn btn-primary w-full" disabled={loading} type="submit">
         {loading ? <LoaderCircle className="size-4 animate-spin" /> : <LogIn className="size-4" />}
-        {loading ? "Memverifikasi..." : "Masuk"}
+        {loading ? "Memeriksa akun..." : "Masuk"}
       </button>
     </form>
   );

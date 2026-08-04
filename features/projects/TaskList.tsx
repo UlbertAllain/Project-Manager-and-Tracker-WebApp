@@ -4,13 +4,14 @@ import { useMemo, useState, useTransition } from "react";
 import { CalendarDays, GripVertical, Plus, Trash2, UserRound } from "lucide-react";
 import { addTaskAction, deleteTaskAction, updateTaskStatusAction } from "@/features/projects/actions";
 import {
+  PRIORITY_LABELS,
   TASK_PRIORITIES,
   TASK_STATUSES,
   TASK_STATUS_LABELS,
   type ProjectTask,
   type TaskStatus,
 } from "@/features/projects/types";
-import type { UserProfile } from "@/features/users/types";
+import { USER_ROLE_LABELS, type UserProfile } from "@/features/users/types";
 import { formatDate, isOverdue } from "@/lib/format";
 
 export function TaskList({
@@ -52,7 +53,7 @@ export function TaskList({
         await updateTaskStatusAction(formData);
       } catch {
         setTasks(previous);
-        setError("Status task gagal disimpan. Perubahan dikembalikan.");
+        setError("Status tugas belum berhasil disimpan. Silakan coba kembali.");
       }
     });
   }
@@ -60,24 +61,24 @@ export function TaskList({
   return (
     <section className="panel-card overflow-hidden">
       <div className="section-header">
-        <div><span className="eyebrow">DELIVERY BOARD</span><h3>Pekerjaan project</h3><p>Task dapat dipindahkan sesuai tahap pengerjaan dan review.</p></div>
-        <div className="flex items-center gap-2">{isPending ? <span className="saving-indicator">Menyimpan...</span> : null}{canManage ? <button className="btn btn-secondary" type="button" onClick={() => setShowForm((value) => !value)}><Plus className="size-4" /> Tambah task</button> : null}</div>
+        <div><span className="eyebrow">PAPAN TUGAS</span><h3>Tugas Proyek</h3><p>Pindahkan tugas sesuai tahap pengerjaan, tinjauan, dan revisi.</p></div>
+        <div className="flex items-center gap-2">{isPending ? <span className="saving-indicator">Menyimpan...</span> : null}{canManage ? <button className="btn btn-secondary" type="button" onClick={() => setShowForm((value) => !value)}><Plus className="size-4" /> Tambah Tugas</button> : null}</div>
       </div>
 
       {showForm && canManage ? (
         <form action={async (formData) => { await addTaskAction(formData); setShowForm(false); }} className="task-create-panel">
           <input type="hidden" name="projectId" value={projectId} />
-          <div className="md:col-span-2"><label className="label">Judul task</label><input className="input" name="title" placeholder="Apa yang harus diselesaikan?" required /></div>
-          <div className="md:col-span-2"><label className="label">Deskripsi / acceptance criteria</label><textarea className="input min-h-24" name="description" placeholder="Jelaskan hasil yang dianggap selesai." /></div>
-          <div><label className="label">Assignee</label><select className="input" name="assigneeId" onChange={(event) => {
+          <div className="md:col-span-2"><label className="label">Judul tugas</label><input className="input" name="title" placeholder="Apa yang harus diselesaikan?" required /></div>
+          <div className="md:col-span-2"><label className="label">Deskripsi / kriteria selesai</label><textarea className="input min-h-24" name="description" placeholder="Jelaskan hasil yang dianggap selesai." /></div>
+          <div><label className="label">Penanggung jawab</label><select className="input" name="assigneeId" onChange={(event) => {
             const select = event.currentTarget;
             const hidden = select.form?.elements.namedItem("assignee") as HTMLInputElement | null;
             if (hidden) hidden.value = select.options[select.selectedIndex]?.dataset.name ?? "Belum ditugaskan";
-          }}><option data-name="Belum ditugaskan" value="">Belum ditugaskan</option>{activeUsers.map((user) => <option data-name={user.name} key={user.uid} value={user.uid}>{user.name} — {user.jobTitle || user.role.replaceAll("_", " ")}</option>)}</select><input type="hidden" name="assignee" defaultValue="Belum ditugaskan" /></div>
-          <div><label className="label">Prioritas</label><select className="input" name="priority" defaultValue="MEDIUM">{TASK_PRIORITIES.map((value) => <option key={value} value={value}>{value}</option>)}</select></div>
-          <div><label className="label">Deadline</label><input className="input" name="dueDate" type="date" /></div>
+          }}><option data-name="Belum ditugaskan" value="">Belum ditugaskan</option>{activeUsers.map((user) => <option data-name={user.name} key={user.uid} value={user.uid}>{user.name} — {user.jobTitle || USER_ROLE_LABELS[user.role]}</option>)}</select><input type="hidden" name="assignee" defaultValue="Belum ditugaskan" /></div>
+          <div><label className="label">Prioritas</label><select className="input" name="priority" defaultValue="MEDIUM">{TASK_PRIORITIES.map((value) => <option key={value} value={value}>{PRIORITY_LABELS[value]}</option>)}</select></div>
+          <div><label className="label">Batas waktu</label><input className="input" name="dueDate" type="date" /></div>
           <input type="hidden" name="status" value="TODO" />
-          <div className="flex items-end gap-2"><button className="btn btn-primary flex-1" type="submit">Simpan task</button><button className="btn btn-secondary" type="button" onClick={() => setShowForm(false)}>Batal</button></div>
+          <div className="flex items-end gap-2"><button className="btn btn-primary flex-1" type="submit">Simpan Tugas</button><button className="btn btn-secondary" type="button" onClick={() => setShowForm(false)}>Batal</button></div>
         </form>
       ) : null}
 
@@ -104,14 +105,14 @@ export function TaskList({
                       event.dataTransfer.setData("text/task-id", task.id);
                       event.dataTransfer.effectAllowed = "move";
                     }} onDragEnd={() => setDraggedId(null)}>
-                      <div className="flex items-start justify-between gap-2"><span className={`priority-chip priority-${task.priority.toLowerCase()}`}>{task.priority}</span>{editable ? <GripVertical className="size-4 text-[var(--text-subtle)]" /> : null}</div>
+                      <div className="flex items-start justify-between gap-2"><span className={`priority-chip priority-${task.priority.toLowerCase()}`}>{PRIORITY_LABELS[task.priority]}</span>{editable ? <GripVertical className="size-4 text-[var(--text-subtle)]" /> : null}</div>
                       <h4>{task.title}</h4><p className="line-clamp-3">{task.description || "Belum ada detail pekerjaan."}</p>
                       <div className="task-card-meta"><span><UserRound className="size-3" /> {task.assignee}</span><span className={isOverdue(task.dueDate, task.status) ? "text-rose-400" : ""}><CalendarDays className="size-3" /> {formatDate(task.dueDate)}</span></div>
-                      {canManage ? <form action={deleteTaskAction} className="mt-3 border-t border-[var(--border)] pt-2"><input type="hidden" name="projectId" value={projectId} /><input type="hidden" name="taskId" value={task.id} /><button className="task-delete" type="submit"><Trash2 className="size-3" /> Hapus task</button></form> : null}
+                      {canManage ? <form action={deleteTaskAction} className="mt-3 border-t border-[var(--border)] pt-2"><input type="hidden" name="projectId" value={projectId} /><input type="hidden" name="taskId" value={task.id} /><button className="task-delete" type="submit"><Trash2 className="size-3" /> Hapus Tugas</button></form> : null}
                     </article>
                   );
                 })}
-                {columnTasks.length === 0 ? <div className="kanban-empty">Belum ada task</div> : null}
+                {columnTasks.length === 0 ? <div className="kanban-empty">Belum ada tugas pada tahap ini</div> : null}
               </div>
             </section>
           );

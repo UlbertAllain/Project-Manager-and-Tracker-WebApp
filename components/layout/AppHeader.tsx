@@ -13,10 +13,10 @@ export function AppHeader({ user }: { user: SessionUser }) {
     <header className="app-header">
       <form action="/projects" className="header-search" method="GET">
         <Search className="size-4" aria-hidden />
-        <input name="q" placeholder="Cari proyek, klien, atau project manager..." aria-label="Cari proyek" />
+        <input name="q" placeholder="Cari proyek, klien, atau manajer proyek..." aria-label="Cari proyek" />
       </form>
 
-      <div className="header-workspace-title">Workspace Internal</div>
+      <div className="header-workspace-title">Ruang Kerja Internal</div>
 
       <div className="header-actions">
         <span className="header-date"><CalendarDays className="size-4" /> {today}</span>

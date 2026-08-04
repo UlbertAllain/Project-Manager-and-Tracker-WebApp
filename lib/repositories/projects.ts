@@ -61,8 +61,8 @@ function taskPriority(value: unknown): TaskPriority {
 function toProject(id: string, data: DocumentData): Project {
   return {
     id,
-    name: String(data.name ?? data.projectName ?? "Project tanpa nama"),
-    clientName: String(data.clientName ?? "Internal"),
+    name: String(data.name ?? data.projectName ?? "Proyek tanpa nama"),
+    clientName: String(data.clientName ?? "Proyek Internal"),
     objective: String(data.objective ?? data.goal ?? ""),
     description: String(data.description ?? ""),
     leadId: String(data.leadId ?? data.projectLeadId ?? ""),
@@ -92,7 +92,7 @@ function toTask(projectId: string, id: string, data: DocumentData, projectName =
     id,
     projectId,
     projectName,
-    title: String(data.title ?? "Task tanpa judul"),
+    title: String(data.title ?? "Tugas tanpa judul"),
     description: String(data.description ?? ""),
     assigneeId: String(data.assigneeId ?? data.assignedToId ?? ""),
     assignee: String(data.assignee ?? data.assigneeName ?? data.assignedTo ?? "Belum ditugaskan"),
@@ -265,7 +265,7 @@ async function findTaskRef(projectId: string, taskId: string) {
   const legacyRef = db.collection("tasks").doc(taskId);
   const legacy = await legacyRef.get();
   if (legacy.exists && String(legacy.data()?.projectId ?? "") === projectId) return legacyRef;
-  throw new Error("Task tidak ditemukan.");
+  throw new Error("Tugas tidak ditemukan.");
 }
 
 export async function getTask(projectId: string, taskId: string): Promise<ProjectTask | null> {
@@ -344,7 +344,7 @@ export async function deleteComment(projectId: string, commentId: string, userId
   const snapshot = nested.exists ? nested : await ref.get();
   if (!snapshot.exists || String(snapshot.data()?.projectId ?? projectId) !== projectId) return;
   const ownerId = String(snapshot.data()?.authorId ?? snapshot.data()?.userId ?? "");
-  if (!isAdmin && ownerId !== userId) throw new Error("Kamu hanya dapat menghapus komentar milikmu sendiri.");
+  if (!isAdmin && ownerId !== userId) throw new Error("Anda hanya dapat menghapus komentar yang Anda buat.");
   await ref.delete();
 }
 
@@ -376,7 +376,7 @@ export async function deleteAttachment(projectId: string, attachmentId: string, 
   const snapshot = nested.exists ? nested : await ref.get();
   if (!snapshot.exists || String(snapshot.data()?.projectId ?? projectId) !== projectId) return;
   const ownerId = String(snapshot.data()?.createdBy ?? "");
-  if (!isAdmin && ownerId !== userId) throw new Error("Kamu hanya dapat menghapus attachment milikmu sendiri.");
+  if (!isAdmin && ownerId !== userId) throw new Error("Anda hanya dapat menghapus lampiran yang Anda tambahkan.");
   await ref.delete();
 }
 

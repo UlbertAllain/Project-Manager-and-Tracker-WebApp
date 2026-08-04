@@ -22,7 +22,7 @@ export async function createSession(idToken: string): Promise<string> {
   const decoded = await getAdminAuth().verifyIdToken(idToken, true);
   const signedInSecondsAgo = Math.floor(Date.now() / 1000) - decoded.auth_time;
   if (signedInSecondsAgo > 5 * 60) {
-    throw new Error("Login ulang diperlukan sebelum membuat sesi.");
+    throw new Error("Untuk menjaga keamanan akun, silakan masuk kembali.");
   }
 
   return getAdminAuth().createSessionCookie(idToken, {

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { CalendarDays, GripVertical, LayoutGrid, Search, UserRound } from "lucide-react";
 import { updateProjectStatusAction } from "@/features/projects/actions";
-import { PROJECT_STATUSES, PROJECT_STATUS_LABELS, type Project, type ProjectStatus } from "@/features/projects/types";
+import { PRIORITY_LABELS, PROJECT_STATUSES, PROJECT_STATUS_LABELS, type Project, type ProjectStatus } from "@/features/projects/types";
 import type { SessionUser } from "@/lib/auth/session";
 import { formatDate, isOverdue } from "@/lib/format";
 
@@ -45,7 +45,7 @@ export function ProjectBoard({ initialProjects, user }: { initialProjects: Proje
         await updateProjectStatusAction(formData);
       } catch {
         setProjects(previous);
-        setError("Status project gagal disimpan. Posisi kartu dikembalikan.");
+        setError("Tahap proyek belum berhasil disimpan. Silakan coba kembali.");
       }
     });
   }
@@ -53,10 +53,10 @@ export function ProjectBoard({ initialProjects, user }: { initialProjects: Proje
   return (
     <section className="space-y-5">
       <header className="page-heading">
-        <div><span className="eyebrow"><LayoutGrid className="size-3.5" /> PROJECT FLOW</span><h2>Project Board</h2><p>{user.role === "MEMBER" ? "Lihat alur project yang kamu ikuti. Perubahan status dikendalikan oleh PM." : "Drag project antar fase agar portfolio selalu mencerminkan kondisi nyata."}</p></div>
+        <div><span className="eyebrow"><LayoutGrid className="size-3.5" /> ALUR PROYEK</span><h2>Papan Kerja Proyek</h2><p>{user.role === "MEMBER" ? "Lihat perkembangan proyek yang Anda ikuti. Perubahan tahap dikelola oleh manajer proyek." : "Pindahkan proyek antar tahap agar papan kerja selalu mencerminkan kondisi terbaru."}</p></div>
       </header>
       <div className="toolbar-card">
-        <label className="search-field"><Search className="size-4" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari project, client, atau PM..." /></label>
+        <label className="search-field"><Search className="size-4" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari proyek, klien, atau manajer proyek..." /></label>
         <select className="compact-select" value={category} onChange={(event) => setCategory(event.target.value)}><option value="ALL">Semua kategori</option>{categories.map((value) => <option key={value} value={value}>{value}</option>)}</select>
         {isPending ? <span className="saving-indicator">Menyimpan...</span> : null}
       </div>
@@ -83,15 +83,15 @@ export function ProjectBoard({ initialProjects, user }: { initialProjects: Proje
                       event.dataTransfer.setData("text/project-id", project.id);
                     }} onDragEnd={() => setDraggedProjectId(null)}>
                       <Link href={`/projects/${project.id}`}>
-                        <div className="flex items-start justify-between gap-2"><span className={`priority-chip priority-${project.priority.toLowerCase()}`}>{project.priority}</span>{movable ? <GripVertical className="size-4 text-[var(--text-subtle)]" /> : null}</div>
+                        <div className="flex items-start justify-between gap-2"><span className={`priority-chip priority-${project.priority.toLowerCase()}`}>{PRIORITY_LABELS[project.priority]}</span>{movable ? <GripVertical className="size-4 text-[var(--text-subtle)]" /> : null}</div>
                         <h4>{project.name}</h4><p className="client-name">{project.clientName}</p>
-                        <div className="mt-4"><div className="mb-1.5 flex justify-between text-[10px]"><span className="text-[var(--text-subtle)]">Progress</span><strong>{project.progress}%</strong></div><div className="progress-track"><span style={{ width: `${project.progress}%` }} /></div></div>
+                        <div className="mt-4"><div className="mb-1.5 flex justify-between text-[10px]"><span className="text-[var(--text-subtle)]">Progres</span><strong>{project.progress}%</strong></div><div className="progress-track"><span style={{ width: `${project.progress}%` }} /></div></div>
                         <div className="card-meta-grid"><span><UserRound className="size-3" /> {project.lead}</span><span className={isOverdue(project.deadline, project.status) ? "text-rose-400" : ""}><CalendarDays className="size-3" /> {formatDate(project.deadline)}</span></div>
                       </Link>
                     </article>
                   );
                 })}
-                {columnProjects.length === 0 ? <div className="kanban-empty">Belum ada project</div> : null}
+                {columnProjects.length === 0 ? <div className="kanban-empty">Belum ada proyek pada tahap ini</div> : null}
               </div>
             </section>
           );

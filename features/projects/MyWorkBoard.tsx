@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { CalendarDays, Search, UserRound } from "lucide-react";
 import { updateTaskStatusAction } from "@/features/projects/actions";
-import { TASK_STATUSES, TASK_STATUS_LABELS, type ProjectTask, type TaskStatus } from "@/features/projects/types";
+import { PRIORITY_LABELS, TASK_STATUSES, TASK_STATUS_LABELS, type ProjectTask, type TaskStatus } from "@/features/projects/types";
 import { formatDate, isOverdue } from "@/lib/format";
 
 export function MyWorkBoard({ initialTasks }: { initialTasks: ProjectTask[] }) {
@@ -35,7 +35,7 @@ export function MyWorkBoard({ initialTasks }: { initialTasks: ProjectTask[] }) {
         await updateTaskStatusAction(formData);
       } catch {
         setTasks(previous);
-        setError("Status task gagal disimpan. Perubahan dikembalikan.");
+        setError("Status tugas belum berhasil disimpan. Silakan coba kembali.");
       }
     });
   }
@@ -43,8 +43,8 @@ export function MyWorkBoard({ initialTasks }: { initialTasks: ProjectTask[] }) {
   return (
     <section className="space-y-4">
       <div className="toolbar-card">
-        <label className="search-field"><Search className="size-4" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari task atau project..." /></label>
-        {isPending ? <span className="saving-indicator">Menyimpan perubahan...</span> : <span className="toolbar-note">Drag kartu untuk update status</span>}
+        <label className="search-field"><Search className="size-4" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari tugas atau proyek..." /></label>
+        {isPending ? <span className="saving-indicator">Menyimpan perubahan...</span> : <span className="toolbar-note">Seret kartu untuk memperbarui status</span>}
       </div>
       {error ? <div className="alert-error">{error}</div> : null}
       <div className="kanban-scroll work-board">
@@ -66,15 +66,15 @@ export function MyWorkBoard({ initialTasks }: { initialTasks: ProjectTask[] }) {
                     event.dataTransfer.effectAllowed = "move";
                   }} onDragEnd={() => setDraggedId(null)}>
                     <Link href={`/projects/${task.projectId}`}>
-                      <div className="flex items-start justify-between gap-2"><span className={`priority-dot priority-${task.priority.toLowerCase()}`} /><span className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-subtle)]">{task.priority}</span></div>
+                      <div className="flex items-start justify-between gap-2"><span className={`priority-dot priority-${task.priority.toLowerCase()}`} /><span className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-subtle)]">{PRIORITY_LABELS[task.priority]}</span></div>
                       <h4>{task.title}</h4>
-                      <p className="line-clamp-2">{task.description || "Tidak ada deskripsi tambahan."}</p>
-                      <div className="task-card-project">{task.projectName || "Project"}</div>
+                      <p className="line-clamp-2">{task.description || "Belum ada rincian tugas."}</p>
+                      <div className="task-card-project">{task.projectName || "Proyek"}</div>
                       <div className="task-card-meta"><span><UserRound className="size-3" /> {task.assignee}</span><span className={isOverdue(task.dueDate, task.status) ? "text-rose-400" : ""}><CalendarDays className="size-3" /> {formatDate(task.dueDate)}</span></div>
                     </Link>
                   </article>
                 ))}
-                {columnTasks.length === 0 ? <div className="kanban-empty">Belum ada task</div> : null}
+                {columnTasks.length === 0 ? <div className="kanban-empty">Belum ada tugas pada tahap ini</div> : null}
               </div>
             </section>
           );

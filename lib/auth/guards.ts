@@ -10,14 +10,14 @@ export async function requireUser(): Promise<SessionUser> {
 
 export async function requireAdmin(): Promise<SessionUser> {
   const user = await requireUser();
-  if (user.role !== "ADMIN") throw new Error("Akses hanya untuk administrator.");
+  if (user.role !== "ADMIN") throw new Error("Anda tidak memiliki akses ke halaman ini.");
   return user;
 }
 
 export async function requireProjectManager(): Promise<SessionUser> {
   const user = await requireUser();
   if (!['ADMIN', 'PROJECT_MANAGER'].includes(user.role)) {
-    throw new Error("Akses hanya untuk admin atau project manager.");
+    throw new Error("Halaman ini hanya dapat diakses oleh Pemilik / Admin atau Manajer Proyek.");
   }
   return user;
 }

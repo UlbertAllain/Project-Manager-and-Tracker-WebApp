@@ -10,7 +10,7 @@ export default async function NewProjectPage() {
   return (
     <section className="space-y-5">
       <header className="page-heading">
-        <div><Link className="back-link" href="/projects"><ChevronLeft className="size-4" /> Kembali ke proyek</Link><h2>Proyek baru</h2><p>Bangun struktur kerja yang jelas sejak proyek dimulai.</p></div>
+        <div><Link className="back-link" href="/projects"><ChevronLeft className="size-4" /> Kembali ke proyek</Link><h2>Proyek Baru</h2><p>Tetapkan tujuan, tim, jadwal, dan ruang lingkup proyek sejak awal.</p></div>
       </header>
       <ProjectForm users={users} />
     </section>

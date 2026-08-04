@@ -19,7 +19,7 @@ function hasValidOrigin(request: Request) {
 export async function POST(request: Request) {
   try {
     if (!hasValidOrigin(request)) {
-      return NextResponse.json({ error: "Origin request tidak valid." }, { status: 403 });
+      return NextResponse.json({ error: "Permintaan tidak dapat diproses." }, { status: 403 });
     }
     const body = bodySchema.parse(await request.json());
     const sessionCookie = await createSession(body.idToken);
@@ -33,13 +33,13 @@ export async function POST(request: Request) {
     });
     return response;
   } catch {
-    return NextResponse.json({ error: "Autentikasi tidak valid." }, { status: 401 });
+    return NextResponse.json({ error: "Email atau kata sandi tidak sesuai." }, { status: 401 });
   }
 }
 
 export async function DELETE(request: Request) {
   if (!hasValidOrigin(request)) {
-    return NextResponse.json({ error: "Origin request tidak valid." }, { status: 403 });
+    return NextResponse.json({ error: "Permintaan tidak dapat diproses." }, { status: 403 });
   }
   const response = NextResponse.json({ ok: true });
   response.cookies.set(SESSION_COOKIE_NAME, "", {

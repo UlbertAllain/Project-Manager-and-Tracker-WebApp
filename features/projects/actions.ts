@@ -27,7 +27,12 @@ import {
   setTaskStatus,
   updateProject,
 } from "@/lib/repositories/projects";
-import { PROJECT_STATUSES, type ProjectStatus } from "@/features/projects/types";
+import {
+  PROJECT_STATUSES,
+  PROJECT_STATUS_LABELS,
+  TASK_STATUS_LABELS,
+  type ProjectStatus,
+} from "@/features/projects/types";
 import { listUsers } from "@/lib/repositories/users";
 
 function text(formData: FormData, key: string) {
@@ -72,14 +77,14 @@ function revalidateProject(projectId: string) {
 async function accessibleProject(projectId: string) {
   const user = await requireUser();
   const project = await getProject(projectId);
-  if (!project || !canAccessProject(user, project)) throw new Error("Project tidak ditemukan atau tidak dapat diakses.");
+  if (!project || !canAccessProject(user, project)) throw new Error("Proyek tidak ditemukan atau Anda tidak memiliki akses.");
   return { user, project };
 }
 
 async function manageableProject(projectId: string) {
   const user = await requireUser();
   const project = await getProject(projectId);
-  if (!project || !canManageProject(user, project)) throw new Error("Kamu tidak memiliki izin mengelola project ini.");
+  if (!project || !canManageProject(user, project)) throw new Error("Anda tidak memiliki izin untuk mengelola proyek ini.");
   return { user, project };
 }
 
@@ -91,7 +96,7 @@ export async function createProjectAction(formData: FormData) {
     actorId: user.uid,
     actorName: user.name,
     action: "PROJECT_CREATED",
-    message: `${user.name} membuat project ini.`,
+    message: `${user.name} membuat proyek ini.`,
   });
   redirect(`/projects/${projectId}`);
 }
@@ -105,7 +110,7 @@ export async function updateProjectAction(formData: FormData) {
     actorId: user.uid,
     actorName: user.name,
     action: "PROJECT_UPDATED",
-    message: `${user.name} memperbarui informasi project.`,
+    message: `${user.name} memperbarui informasi proyek.`,
   });
   revalidateProject(projectId);
   redirect(`/projects/${projectId}`);
@@ -125,14 +130,14 @@ export async function updateProjectStatusAction(formData: FormData) {
   const projectId = text(formData, "projectId");
   const { user } = await manageableProject(projectId);
   const rawStatus = text(formData, "status");
-  if (!PROJECT_STATUSES.includes(rawStatus as ProjectStatus)) throw new Error("Status project tidak valid.");
+  if (!PROJECT_STATUSES.includes(rawStatus as ProjectStatus)) throw new Error("Tahap proyek tidak valid.");
   const status = rawStatus as ProjectStatus;
   await updateProject(projectId, { status, ...(status === "COMPLETED" ? { progress: 100 } : {}) });
   await addActivity(projectId, {
     actorId: user.uid,
     actorName: user.name,
     action: "PROJECT_STATUS",
-    message: `${user.name} memindahkan status project ke ${status}.`,
+    message: `${user.name} mengubah tahap proyek menjadi ${PROJECT_STATUS_LABELS[status]}.`,
   });
   revalidateProject(projectId);
 }
@@ -157,7 +162,7 @@ export async function addTaskAction(formData: FormData) {
     actorId: user.uid,
     actorName: user.name,
     action: "TASK_CREATED",
-    message: `${user.name} menambahkan task “${payload.title}”.`,
+    message: `${user.name} menambahkan tugas “${payload.title}”.`,
   });
   revalidateProject(projectId);
 }
@@ -170,17 +175,17 @@ export async function updateTaskStatusAction(formData: FormData) {
   });
   const { user, project } = await accessibleProject(payload.projectId);
   const task = await getTask(payload.projectId, payload.taskId);
-  if (!task) throw new Error("Task tidak ditemukan.");
+  if (!task) throw new Error("Tugas tidak ditemukan.");
   const canUpdate = canManageProject(user, project)
     || task.assigneeId === user.uid
     || (!task.assigneeId && task.assignee.toLowerCase() === user.name.toLowerCase());
-  if (!canUpdate) throw new Error("Kamu hanya dapat memperbarui task yang ditugaskan kepadamu.");
+  if (!canUpdate) throw new Error("Anda hanya dapat memperbarui tugas yang diberikan kepada Anda.");
   await setTaskStatus(payload.projectId, payload.taskId, payload.status);
   await addActivity(payload.projectId, {
     actorId: user.uid,
     actorName: user.name,
     action: "TASK_STATUS",
-    message: `${user.name} mengubah “${task.title}” menjadi ${payload.status}.`,
+    message: `${user.name} mengubah “${task.title}” menjadi ${TASK_STATUS_LABELS[payload.status]}.`,
   });
   revalidateProject(payload.projectId);
 }
@@ -208,7 +213,7 @@ export async function deleteTaskAction(formData: FormData) {
     actorId: user.uid,
     actorName: user.name,
     action: "TASK_DELETED",
-    message: `${user.name} menghapus task “${task?.title ?? "Task"}”.`,
+    message: `${user.name} menghapus tugas “${task?.title ?? "Tugas"}”.`,
   });
   revalidateProject(projectId);
 }
@@ -234,7 +239,7 @@ export async function addCommentAction(formData: FormData) {
     actorId: user.uid,
     actorName: user.name,
     action: "COMMENT_ADDED",
-    message: `${user.name} menambahkan laporan${payload.taskTitle ? ` pada “${payload.taskTitle}”` : " project"}.`,
+    message: `${user.name} menambahkan laporan${payload.taskTitle ? ` pada “${payload.taskTitle}”` : " proyek"}.`,
   });
   revalidatePath(`/projects/${projectId}`);
 }
@@ -270,7 +275,7 @@ export async function addAttachmentAction(formData: FormData) {
     actorId: user.uid,
     actorName: user.name,
     action: "ATTACHMENT_ADDED",
-    message: `${user.name} melampirkan “${payload.title}”.`,
+    message: `${user.name} menambahkan lampiran “${payload.title}”.`,
   });
   revalidatePath(`/projects/${projectId}`);
 }

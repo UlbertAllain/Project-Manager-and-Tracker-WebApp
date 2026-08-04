@@ -11,7 +11,7 @@ interface ConfirmSubmitButtonProps {
 export function ConfirmSubmitButton({
   children,
   className = "btn btn-danger",
-  message = "Tindakan ini tidak dapat dibatalkan. Lanjutkan?",
+  message = "Tindakan ini tidak dapat dibatalkan. Apakah Anda yakin ingin melanjutkan?",
 }: ConfirmSubmitButtonProps) {
   return (
     <button

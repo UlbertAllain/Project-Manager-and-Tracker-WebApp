@@ -19,7 +19,7 @@ export function LogoutButton({ compact = false }: { compact?: boolean }) {
 
   return (
     <button
-      aria-label="Keluar dari workspace"
+      aria-label="Keluar dari ruang kerja"
       className={compact ? "sidebar-logout" : "btn btn-secondary w-full"}
       onClick={logout}
       type="button"

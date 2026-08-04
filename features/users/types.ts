@@ -2,9 +2,9 @@ export const USER_ROLES = ["ADMIN", "PROJECT_MANAGER", "MEMBER"] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 
 export const USER_ROLE_LABELS: Record<UserRole, string> = {
-  ADMIN: "Admin / Owner",
-  PROJECT_MANAGER: "Project Manager",
-  MEMBER: "Team Member",
+  ADMIN: "Pemilik / Admin",
+  PROJECT_MANAGER: "Manajer Proyek",
+  MEMBER: "Anggota Tim",
 };
 
 export interface UserProfile {

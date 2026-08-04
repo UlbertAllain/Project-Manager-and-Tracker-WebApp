@@ -26,7 +26,7 @@ export const projectInputSchema = z.object({
   progress: z.coerce.number().int().min(0).max(100),
   notes: z.string().trim().max(4000).default(""),
 }).refine((data) => data.deadline >= data.startDate, {
-  message: "Deadline tidak boleh sebelum tanggal mulai.",
+  message: "Batas waktu tidak boleh lebih awal dari tanggal mulai.",
   path: ["deadline"],
 });
 
@@ -71,6 +71,6 @@ export const attachmentInputSchema = z.object({
     } catch {
       return false;
     }
-  }, "Attachment hanya menerima URL http/https."),
+  }, "Lampiran hanya menerima tautan yang diawali http:// atau https://."),
   platform: z.enum(ATTACHMENT_PLATFORMS),
 });

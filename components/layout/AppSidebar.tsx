@@ -23,7 +23,7 @@ const items = [
   { href: "/dashboard", label: "Ringkasan", icon: BarChart3, roles: ["ADMIN", "PROJECT_MANAGER", "MEMBER"] },
   { href: "/projects", label: "Proyek", icon: CalendarRange, roles: ["ADMIN", "PROJECT_MANAGER", "MEMBER"] },
   { href: "/my-work", label: "Pekerjaan Saya", icon: ListChecks, roles: ["ADMIN", "PROJECT_MANAGER", "MEMBER"] },
-  { href: "/board", label: "Board", icon: Columns3, roles: ["ADMIN", "PROJECT_MANAGER", "MEMBER"] },
+  { href: "/board", label: "Papan Kerja", icon: Columns3, roles: ["ADMIN", "PROJECT_MANAGER", "MEMBER"] },
   { href: "/team", label: "Tim", icon: UsersRound, roles: ["ADMIN", "PROJECT_MANAGER"] },
   { href: "/reports", label: "Laporan", icon: BriefcaseBusiness, roles: ["ADMIN", "PROJECT_MANAGER"] },
   { href: "/finance", label: "Keuangan", icon: WalletCards, roles: ["ADMIN"] },
@@ -60,7 +60,7 @@ export function AppSidebar({ user }: { user: SessionUser }) {
             <div className="sidebar-logo">N</div>
             <div className="min-w-0">
               <strong>Nexty Workspace</strong>
-              <span>Internal Project Management</span>
+              <span>Manajemen Proyek Internal</span>
             </div>
           </Link>
           <button className="mobile-sidebar-close" type="button" onClick={() => setOpen(false)} aria-label="Tutup navigasi">
@@ -85,7 +85,7 @@ export function AppSidebar({ user }: { user: SessionUser }) {
             <span className="workspace-switcher-icon"><Building2 className="size-4" /></span>
             <div className="min-w-0 flex-1">
               <strong>PT Nexty Digital</strong>
-              <span>Workspace internal</span>
+              <span>Ruang kerja perusahaan</span>
             </div>
           </div>
           <LogoutButton compact />

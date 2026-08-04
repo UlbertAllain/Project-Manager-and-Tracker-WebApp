@@ -20,11 +20,12 @@ import { formatDate, isOverdue, parseDateValue } from "@/lib/format";
 import { daysUntil, projectHealth, taskSummary } from "@/lib/project-insights";
 import { listActivities, listProjects, listTasksForUser } from "@/lib/repositories/projects";
 import { listUsers } from "@/lib/repositories/users";
+import { formatActivityMessage } from "@/lib/ui-copy";
 
 const boardColumns: Array<{ status: TaskStatus; label: string }> = [
   { status: "IN_PROGRESS", label: "Dikerjakan" },
-  { status: "REVIEW", label: "Review" },
-  { status: "BLOCKED", label: "Blocked" },
+  { status: "REVIEW", label: "Tinjauan" },
+  { status: "BLOCKED", label: "Terhambat" },
   { status: "DONE", label: "Selesai" },
 ];
 
@@ -84,29 +85,33 @@ export default async function DashboardPage() {
     <section className="dashboard-page">
       <header className="dashboard-title-row">
         <div>
-          <h1>Ringkasan Proyek Internal</h1>
-          <p>Kelola pekerjaan, kolaborasi tim, pelaporan, dan evaluasi proyek dalam satu workspace internal.</p>
+          <h1>Ringkasan Proyek</h1>
+          <p>
+            {user.role === "MEMBER"
+              ? "Pantau tugas, batas waktu, dan pembaruan pekerjaan yang menjadi tanggung jawab Anda."
+              : "Pantau kondisi proyek, prioritas pekerjaan, dan beban kerja tim dalam satu ruang kerja."}
+          </p>
         </div>
         {user.role !== "MEMBER" ? (
-          <Link className="btn btn-primary" href="/projects/new">Buat proyek</Link>
+          <Link className="btn btn-primary" href="/projects/new">Buat Proyek</Link>
         ) : (
-          <Link className="btn btn-primary" href="/my-work">Buka Pekerjaan Saya</Link>
+          <Link className="btn btn-primary" href="/my-work">Lihat Pekerjaan Saya</Link>
         )}
       </header>
 
       <div className="overview-metrics">
         <OverviewMetric icon={<FolderKanban />} label="Proyek Aktif" value={activeProjects.length} hint={`${projects.length} proyek dapat diakses`} tone="blue" />
-        <OverviewMetric icon={<Clock3 />} label="Menunggu Review" value={summary.review} hint={`${summary.revision} task perlu revisi`} tone="amber" />
-        <OverviewMetric icon={<AlertTriangle />} label="Task Blocked" value={summary.blocked} hint={summary.blocked ? "Perlu ditindaklanjuti tim" : "Tidak ada hambatan aktif"} tone="red" />
-        <OverviewMetric icon={<CalendarDays />} label="Deadline Minggu Ini" value={deadlinesThisWeek} hint={`${summary.overdue} task sudah terlambat`} tone="violet" />
+        <OverviewMetric icon={<Clock3 />} label="Menunggu Tinjauan" value={summary.review} hint={`${summary.revision} tugas perlu direvisi`} tone="amber" />
+        <OverviewMetric icon={<AlertTriangle />} label="Tugas Terhambat" value={summary.blocked} hint={summary.blocked ? "Perlu ditindaklanjuti oleh tim" : "Tidak ada hambatan aktif"} tone="red" />
+        <OverviewMetric icon={<CalendarDays />} label="Batas Waktu Pekan Ini" value={deadlinesThisWeek} hint={`${summary.overdue} tugas telah melewati batas waktu`} tone="violet" />
       </div>
 
       <div className="dashboard-primary-grid">
         <section className="dashboard-panel project-health-panel">
-          <PanelHeader title="Health Proyek" href="/projects" />
+          <PanelHeader title="Kondisi Proyek" href="/projects" />
           <div className="dashboard-table-wrap">
             <table className="dashboard-table">
-              <thead><tr><th>Proyek</th><th>PM</th><th>Deadline</th><th>Progress</th><th>Health</th></tr></thead>
+              <thead><tr><th>Proyek</th><th>Manajer</th><th>Batas Waktu</th><th>Progres</th><th>Kondisi</th></tr></thead>
               <tbody>
                 {healthRows.map(({ project, health }) => (
                   <tr key={project.id}>
@@ -135,19 +140,19 @@ export default async function DashboardPage() {
           <div className="work-list">
             {workItems.map((task) => (
               <Link href={`/projects/${task.projectId}`} className="work-row" key={`${task.projectId}-${task.id}`}>
-                <div className="min-w-0 flex-1"><strong>{task.title}</strong><span>{task.projectName || "Project"}</span></div>
+                <div className="min-w-0 flex-1"><strong>{task.title}</strong><span>{task.projectName || "Proyek"}</span></div>
                 <span className={`status-pill task-${task.status.toLowerCase()}`}>{TASK_STATUS_LABELS[task.status]}</span>
                 <time className={isOverdue(task.dueDate, task.status) ? "overdue" : ""}>{formatDate(task.dueDate)}</time>
               </Link>
             ))}
-            {workItems.length === 0 ? <div className="dashboard-empty">Tidak ada task aktif yang perlu dikerjakan.</div> : null}
+            {workItems.length === 0 ? <div className="dashboard-empty">Tidak ada tugas aktif yang perlu ditindaklanjuti.</div> : null}
           </div>
         </section>
       </div>
 
       <div className="dashboard-secondary-grid">
         <section className="dashboard-panel board-preview-panel">
-          <PanelHeader title="Preview Board" href="/board" linkLabel="Lihat board" />
+          <PanelHeader title="Ringkasan Papan Kerja" href="/board" linkLabel="Buka papan kerja" />
           <div className="board-preview-grid">
             {boardColumns.map((column) => {
               const columnTasks = tasks.filter((task) => task.status === column.status);
@@ -158,11 +163,11 @@ export default async function DashboardPage() {
                     {columnTasks.slice(0, 2).map((task) => (
                       <Link href={`/projects/${task.projectId}`} className="board-mini-card" key={`${column.status}-${task.projectId}-${task.id}`}>
                         <strong>{task.title}</strong>
-                        <span>{task.projectName || "Project"}</span>
+                        <span>{task.projectName || "Proyek"}</span>
                         <i className="avatar avatar-xs">{initials(task.assignee)}</i>
                       </Link>
                     ))}
-                    {columnTasks.length === 0 ? <div className="board-column-empty">Belum ada task</div> : null}
+                    {columnTasks.length === 0 ? <div className="board-column-empty">Belum ada tugas</div> : null}
                   </div>
                 </div>
               );
@@ -184,7 +189,7 @@ export default async function DashboardPage() {
             <div className="member-work-summary">
               <WorkSummary label="Belum mulai" value={tasks.filter((task) => task.status === "TODO").length} />
               <WorkSummary label="Dikerjakan" value={tasks.filter((task) => task.status === "IN_PROGRESS").length} />
-              <WorkSummary label="Review / Revisi" value={summary.review + summary.revision} />
+              <WorkSummary label="Tinjauan / Revisi" value={summary.review + summary.revision} />
               <WorkSummary label="Selesai" value={summary.done} />
             </div>
           ) : (
@@ -196,7 +201,7 @@ export default async function DashboardPage() {
                   <div className="workload-value"><strong>{member.score}%</strong><div className="workload-track"><span className={workloadTone(member.score)} style={{ width: `${member.score}%` }} /></div></div>
                 </div>
               ))}
-              {workload.length === 0 ? <div className="dashboard-empty">Belum ada task aktif yang ditugaskan.</div> : null}
+              {workload.length === 0 ? <div className="dashboard-empty">Belum ada tugas aktif yang diberikan kepada anggota tim.</div> : null}
             </div>
           )}
         </section>
@@ -229,7 +234,7 @@ function ActivityItem({ activity }: { activity: ProjectActivity & { projectName:
     <Link href={`/projects/${activity.projectId}`} className="recent-activity-row">
       <span className="avatar avatar-sm">{initials(activity.actorName)}</span>
       <div className="min-w-0 flex-1">
-        <p><strong>{activity.actorName}</strong> {activity.message}</p>
+        <p><strong>{activity.actorName}</strong> {formatActivityMessage(activity.message)}</p>
         <span>{activity.projectName} · {relativeTime(activity.createdAt)}</span>
       </div>
       {attachmentActivity ? <Paperclip className="size-4" /> : <MessageSquareText className="size-4" />}

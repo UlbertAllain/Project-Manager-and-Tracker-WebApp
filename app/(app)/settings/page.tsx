@@ -1,4 +1,4 @@
-import { Fingerprint, LockKeyhole, Settings, ShieldCheck, UserRound } from "lucide-react";
+import { BriefcaseBusiness, Building2, Settings, ShieldCheck, UserRound } from "lucide-react";
 import { USER_ROLE_LABELS } from "@/features/users/types";
 import { requireUser } from "@/lib/auth/guards";
 import { getUserProfile } from "@/lib/repositories/users";
@@ -11,9 +11,9 @@ export default async function SettingsPage() {
     <section className="space-y-5">
       <header className="page-heading">
         <div>
-          <span className="eyebrow"><Settings className="size-3.5" /> Akun & keamanan</span>
+          <span className="eyebrow"><Settings className="size-3.5" /> AKUN</span>
           <h2>Pengaturan</h2>
-          <p>Informasi akun internal dan ringkasan perlindungan sesi pengguna.</p>
+          <p>Lihat informasi profil, peran, dan cakupan akses akun Anda.</p>
         </div>
       </header>
 
@@ -28,25 +28,25 @@ export default async function SettingsPage() {
           </div>
           <dl className="settings-grid">
             <Item icon={<UserRound />} label="Nama" value={user.name} />
-            <Item icon={<ShieldCheck />} label="Role" value={USER_ROLE_LABELS[user.role]} />
-            <Item icon={<Fingerprint />} label="Email" value={user.email} />
-            <Item icon={<Fingerprint />} label="User ID" value={user.uid} />
-            <Item icon={<UserRound />} label="Departemen" value={profile?.department || "Belum diatur"} />
-            <Item icon={<UserRound />} label="Status" value={profile?.isActive === false ? "Nonaktif" : "Aktif"} />
+            <Item icon={<ShieldCheck />} label="Peran" value={USER_ROLE_LABELS[user.role]} />
+            <Item icon={<BriefcaseBusiness />} label="Jabatan" value={profile?.jobTitle || "Belum diatur"} />
+            <Item icon={<Building2 />} label="Departemen" value={profile?.department || "Belum diatur"} />
+            <Item icon={<UserRound />} label="Email kerja" value={user.email} />
+            <Item icon={<ShieldCheck />} label="Status akun" value={profile?.isActive === false ? "Nonaktif" : "Aktif"} />
           </dl>
         </section>
 
         <section className="security-card">
-          <div className="security-icon"><LockKeyhole className="size-6" /></div>
+          <div className="security-icon"><ShieldCheck className="size-6" /></div>
           <div className="security-content">
-            <span className="eyebrow">Sesi aman</span>
-            <h3>Identitas pengguna selalu diperiksa oleh server.</h3>
-            <p>Login diverifikasi melalui Firebase Authentication. Browser menerima cookie sesi HttpOnly, sedangkan role dan izin diperiksa kembali saat data dibaca atau diubah.</p>
+            <span className="eyebrow">AKSES DAN WEWENANG</span>
+            <h3>Hak akses mengikuti tanggung jawab Anda.</h3>
+            <p>Setiap pengguna hanya dapat melihat dan mengelola informasi sesuai peran serta proyek yang diberikan.</p>
             <ul>
-              <li>Session cookie HttpOnly</li>
-              <li>Role dari Firebase custom claims</li>
-              <li>Akses proyek diperiksa di server</li>
-              <li>Keuangan hanya dapat diakses admin</li>
+              <li>Akses proyek mengikuti penugasan dan peran Anda.</li>
+              <li>Perubahan penting tercatat dalam riwayat aktivitas.</li>
+              <li>Data keuangan hanya tersedia bagi Pemilik / Admin.</li>
+              <li>Hubungi administrator untuk memperbarui profil atau akses akun.</li>
             </ul>
           </div>
         </section>
