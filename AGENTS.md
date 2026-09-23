@@ -47,12 +47,12 @@ Firebase Client SDK hanya digunakan untuk Authentication. Jangan menambahkan cli
 
 ## Folder Responsibilities
 
-- `app/`: routing, page composition, route handlers.
-- `features/`: feature UI, actions, schemas, domain types.
-- `lib/repositories/`: Firestore persistence/query implementation.
-- `lib/auth/`: session dan authorization guards.
-- `lib/firebase/`: Firebase client/admin bootstrap.
-- `components/`: reusable application UI/layout.
+- `src/app/`: routing, page composition, route handlers.
+- `src/features/`: feature UI, actions, schemas, domain types.
+- `src/lib/repositories/`: Firestore persistence/query implementation.
+- `src/lib/auth/`: session dan authorization guards.
+- `src/lib/firebase/`: Firebase client/admin bootstrap.
+- `src/components/`: reusable application UI/layout.
 - `docs/`: product, migration, audit, release documentation.
 - `scripts/`: controlled local migration/bootstrap scripts.
 

@@ -83,12 +83,12 @@ Lihat:
 ## Project Structure
 
 ```text
-app/                    routes, pages, route handlers
-features/               project/user/auth feature logic and UI
-lib/auth/               session + authorization guards
-lib/firebase/           Firebase client/admin bootstrap
-lib/repositories/       Firestore persistence/query layer
-components/             reusable application UI
+src/app/                routes, pages, route handlers
+src/features/           project/user/auth feature logic and UI
+src/lib/auth/           session + authorization guards
+src/lib/firebase/       Firebase client/admin bootstrap
+src/lib/repositories/   Firestore persistence/query layer
+src/components/         reusable application UI
 scripts/                controlled seed/migration scripts
 docs/                   product, audit, migration, release docs
 ```
