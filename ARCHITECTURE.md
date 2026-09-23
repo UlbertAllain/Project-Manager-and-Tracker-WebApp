@@ -53,39 +53,39 @@ Firestore Security Rules menolak seluruh browser read/write untuk operational co
 ## Structure
 
 ```text
-app/
-├── (app)/
-├── api/
-└── login/
+src/
+├── app/
+│   ├── (app)/
+│   ├── api/
+│   └── login/
+├── features/
+│   ├── auth/
+│   ├── finance/
+│   ├── projects/
+│   └── users/
+├── lib/
+│   ├── auth/
+│   ├── firebase/
+│   └── repositories/
+└── components/
 
-features/
-├── auth/
-├── projects/
-└── users/
-
-lib/
-├── auth/
-├── firebase/
-└── repositories/
-
-components/
 docs/
 scripts/
 ```
 
-### app/
+### src/app/
 Framework concern dan page composition. Hindari business rule besar di page.
 
-### features/
+### src/features/
 Feature-specific components, server actions, schemas, types, dan presentation logic.
 
-### lib/repositories/
+### src/lib/repositories/
 Persistence boundary. Repository boleh mengetahui Firestore/Admin SDK, tetapi tidak boleh menjadi tempat keputusan authorization.
 
-### lib/auth/
+### src/lib/auth/
 Session verification dan reusable authorization guard.
 
-### lib/firebase/
+### src/lib/firebase/
 Firebase bootstrap saja.
 
 ## Authorization
